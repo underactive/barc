@@ -1,0 +1,382 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A1000001238A0001 /* BarcApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000011238A0001 /* BarcApp.swift */; };
+		A1000002238A0001 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000012238A0001 /* ContentView.swift */; };
+		A1000003238A0001 /* WebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000013238A0001 /* WebView.swift */; };
+		A1000004238A0001 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000014238A0001 /* SidebarView.swift */; };
+		A1000005238A0001 /* AddressBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000015238A0001 /* AddressBarView.swift */; };
+		A1000006238A0001 /* Tab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000016238A0001 /* Tab.swift */; };
+		A1000007238A0001 /* BrowserState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000017238A0001 /* BrowserState.swift */; };
+		A1000008238A0001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000018238A0001 /* Assets.xcassets */; };
+		A1000009238A0001 /* PrivacySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001B238A0001 /* PrivacySettings.swift */; };
+		A100000A238A0001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001C238A0001 /* SettingsView.swift */; };
+		A100000B238A0001 /* NetworkActivityMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001D238A0001 /* NetworkActivityMonitor.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A1000000238A0001 /* Barc.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Barc.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1000011238A0001 /* BarcApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcApp.swift; sourceTree = "<group>"; };
+		A1000012238A0001 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A1000013238A0001 /* WebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebView.swift; sourceTree = "<group>"; };
+		A1000014238A0001 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
+		A1000015238A0001 /* AddressBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressBarView.swift; sourceTree = "<group>"; };
+		A1000016238A0001 /* Tab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tab.swift; sourceTree = "<group>"; };
+		A1000017238A0001 /* BrowserState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserState.swift; sourceTree = "<group>"; };
+		A1000018238A0001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A1000019238A0001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A100001A238A0001 /* Barc.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Barc.entitlements; sourceTree = "<group>"; };
+		A100001B238A0001 /* PrivacySettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacySettings.swift; sourceTree = "<group>"; };
+		A100001C238A0001 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A100001D238A0001 /* NetworkActivityMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkActivityMonitor.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A10000F0238A0001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A1000020238A0001 = {
+			isa = PBXGroup;
+			children = (
+				A1000021238A0001 /* Barc */,
+				A1000022238A0001 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A1000021238A0001 /* Barc */ = {
+			isa = PBXGroup;
+			children = (
+				A1000011238A0001 /* BarcApp.swift */,
+				A1000023238A0001 /* Views */,
+				A1000024238A0001 /* Models */,
+				A1000018238A0001 /* Assets.xcassets */,
+				A1000019238A0001 /* Info.plist */,
+				A100001A238A0001 /* Barc.entitlements */,
+			);
+			path = Barc;
+			sourceTree = "<group>";
+		};
+		A1000022238A0001 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000238A0001 /* Barc.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A1000023238A0001 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A1000012238A0001 /* ContentView.swift */,
+				A1000013238A0001 /* WebView.swift */,
+				A1000014238A0001 /* SidebarView.swift */,
+				A1000015238A0001 /* AddressBarView.swift */,
+				A100001C238A0001 /* SettingsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A1000024238A0001 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A1000016238A0001 /* Tab.swift */,
+				A1000017238A0001 /* BrowserState.swift */,
+				A100001B238A0001 /* PrivacySettings.swift */,
+				A100001D238A0001 /* NetworkActivityMonitor.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A10000E0238A0001 /* Barc */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000E1238A0001 /* Build configuration list for PBXNativeTarget "Barc" */;
+			buildPhases = (
+				A10000E2238A0001 /* Sources */,
+				A10000F0238A0001 /* Frameworks */,
+				A10000F1238A0001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Barc;
+			productName = Barc;
+			productReference = A1000000238A0001 /* Barc.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A10000D0238A0001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					A10000E0238A0001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = A10000D1238A0001 /* Build configuration list for PBXProject "Barc" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A1000020238A0001;
+			productRefGroup = A1000022238A0001 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A10000E0238A0001 /* Barc */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A10000F1238A0001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000008238A0001 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A10000E2238A0001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000001238A0001 /* BarcApp.swift in Sources */,
+				A1000002238A0001 /* ContentView.swift in Sources */,
+				A1000003238A0001 /* WebView.swift in Sources */,
+				A1000004238A0001 /* SidebarView.swift in Sources */,
+				A1000005238A0001 /* AddressBarView.swift in Sources */,
+				A1000006238A0001 /* Tab.swift in Sources */,
+				A1000007238A0001 /* BrowserState.swift in Sources */,
+				A1000009238A0001 /* PrivacySettings.swift in Sources */,
+				A100000A238A0001 /* SettingsView.swift in Sources */,
+				A100000B238A0001 /* NetworkActivityMonitor.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A10000C0238A0001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A10000C1238A0001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		A10000C2238A0001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Barc/Barc.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Barc/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.barc.browser;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A10000C3238A0001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Barc/Barc.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Barc/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.barc.browser;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A10000D1238A0001 /* Build configuration list for PBXProject "Barc" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000C0238A0001 /* Debug */,
+				A10000C1238A0001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000E1238A0001 /* Build configuration list for PBXNativeTarget "Barc" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000C2238A0001 /* Debug */,
+				A10000C3238A0001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A10000D0238A0001 /* Project object */;
+}

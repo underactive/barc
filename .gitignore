@@ -1,0 +1,71 @@
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+xcuserdata/
+
+# Xcode Workspace
+*.xcworkspace/*
+!*.xcworkspace/contents.xcworkspacedata
+!*.xcworkspace/xcshareddata/
+*.xcworkspace/xcshareddata/*
+!*.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# CocoaPods
+Pods/
+Podfile.lock
+
+# Carthage
+Carthage/Build/
+Carthage/Checkouts/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# App packaging
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.app
+
+# Archives
+*.xcarchive
+
+# Playgrounds
+timeline.xctimeline
+playground.xcworkspace
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Code Injection
+.inject.md
+
+# IDEs
+.idea/
+*.swp
+*.swo
+*~
+.vscode/
+
+# Secrets and local config
+*.xcconfig
+!*.xcconfig.template
+.env
+.env.*
+secrets/

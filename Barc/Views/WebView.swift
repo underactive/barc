@@ -1,0 +1,508 @@
+import SwiftUI
+import WebKit
+
+struct WebView: NSViewRepresentable {
+    @ObservedObject var tab: Tab
+    @EnvironmentObject var browserState: BrowserState
+    private let settings = PrivacySettings.shared
+
+    static let networkMessageHandler = "barcNetwork"
+
+    func makeNSView(context: Context) -> WKWebView {
+        let configuration = createPrivacyConfiguration(coordinator: context.coordinator)
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+
+        webView.navigationDelegate = context.coordinator
+        webView.uiDelegate = context.coordinator
+        webView.allowsBackForwardNavigationGestures = true
+        webView.allowsMagnification = true
+
+        context.coordinator.setupObservers(for: webView)
+        tab.webView = webView
+
+        if let url = tab.url {
+            webView.load(URLRequest(url: url))
+        }
+
+        return webView
+    }
+
+    func updateNSView(_ webView: WKWebView, context: Context) {
+        // Only load if URL changed externally
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(tab: tab, settings: settings)
+    }
+
+    private func createPrivacyConfiguration(coordinator: Coordinator) -> WKWebViewConfiguration {
+        let configuration = WKWebViewConfiguration()
+
+        // Always use persistent storage to support whitelist
+        configuration.websiteDataStore = .default()
+
+        // Privacy: Disable telemetry and tracking
+        let preferences = WKWebpagePreferences()
+        preferences.allowsContentJavaScript = true
+        configuration.defaultWebpagePreferences = preferences
+
+        // Content controller with message handler and scripts
+        let contentController = WKUserContentController()
+
+        // Add message handler for network activity reporting
+        contentController.add(coordinator, name: Self.networkMessageHandler)
+
+        // Inject network monitoring script (must be first, before privacy scripts)
+        injectNetworkMonitoringScript(into: contentController)
+
+        // Inject privacy scripts
+        injectPrivacyScripts(into: contentController)
+
+        configuration.userContentController = contentController
+
+        // Privacy: Fraudulent website warning
+        configuration.preferences.isFraudulentWebsiteWarningEnabled = settings.fraudulentWebsiteWarning
+
+        return configuration
+    }
+
+    private func injectNetworkMonitoringScript(into controller: WKUserContentController) {
+        let script = """
+        (function() {
+            if (window.__barcNetworkMonitorInstalled) return;
+            window.__barcNetworkMonitorInstalled = true;
+
+            const reportTx = () => {
+                try {
+                    window.webkit.messageHandlers.\(Self.networkMessageHandler).postMessage({type: 'tx'});
+                } catch(e) {}
+            };
+
+            const reportRx = () => {
+                try {
+                    window.webkit.messageHandlers.\(Self.networkMessageHandler).postMessage({type: 'rx'});
+                } catch(e) {}
+            };
+
+            // Intercept fetch()
+            const originalFetch = window.fetch;
+            window.fetch = function(...args) {
+                reportTx();
+                return originalFetch.apply(this, args).then(response => {
+                    reportRx();
+                    return response;
+                }).catch(err => {
+                    reportRx();
+                    throw err;
+                });
+            };
+
+            // Intercept XMLHttpRequest
+            const originalXHROpen = XMLHttpRequest.prototype.open;
+            const originalXHRSend = XMLHttpRequest.prototype.send;
+
+            XMLHttpRequest.prototype.open = function(...args) {
+                this.__barcMethod = args[0];
+                this.__barcUrl = args[1];
+                return originalXHROpen.apply(this, args);
+            };
+
+            XMLHttpRequest.prototype.send = function(...args) {
+                reportTx();
+
+                const xhr = this;
+                const originalOnReadyStateChange = xhr.onreadystatechange;
+
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState === 2) { // Headers received
+                        reportRx();
+                    } else if (xhr.readyState === 3) { // Loading (receiving data)
+                        reportRx();
+                    } else if (xhr.readyState === 4) { // Done
+                        reportRx();
+                    }
+                    if (originalOnReadyStateChange) {
+                        originalOnReadyStateChange.apply(this, arguments);
+                    }
+                };
+
+                // Also listen to progress events for chunked responses
+                xhr.addEventListener('progress', () => reportRx());
+
+                return originalXHRSend.apply(this, args);
+            };
+
+            // Intercept WebSocket
+            const OriginalWebSocket = window.WebSocket;
+            window.WebSocket = function(...args) {
+                const ws = new OriginalWebSocket(...args);
+
+                ws.addEventListener('open', () => reportTx());
+                ws.addEventListener('message', () => reportRx());
+
+                const originalSend = ws.send.bind(ws);
+                ws.send = function(data) {
+                    reportTx();
+                    return originalSend(data);
+                };
+
+                return ws;
+            };
+            window.WebSocket.prototype = OriginalWebSocket.prototype;
+            window.WebSocket.CONNECTING = OriginalWebSocket.CONNECTING;
+            window.WebSocket.OPEN = OriginalWebSocket.OPEN;
+            window.WebSocket.CLOSING = OriginalWebSocket.CLOSING;
+            window.WebSocket.CLOSED = OriginalWebSocket.CLOSED;
+
+            // Intercept EventSource (Server-Sent Events)
+            if (window.EventSource) {
+                const OriginalEventSource = window.EventSource;
+                window.EventSource = function(...args) {
+                    reportTx();
+                    const es = new OriginalEventSource(...args);
+                    es.addEventListener('message', () => reportRx());
+                    es.addEventListener('open', () => reportRx());
+                    return es;
+                };
+                window.EventSource.prototype = OriginalEventSource.prototype;
+            }
+
+            // Monitor video/audio elements for buffering (media streaming)
+            const monitorMediaElement = (element) => {
+                if (element.__barcMonitored) return;
+                element.__barcMonitored = true;
+
+                // Track when actively downloading data
+                element.addEventListener('progress', () => {
+                    // Progress fires when data is being downloaded
+                    if (element.buffered.length > 0) {
+                        reportRx();
+                    }
+                });
+
+                // Also monitor when seeking causes new data fetch
+                element.addEventListener('seeking', () => reportTx());
+                element.addEventListener('seeked', () => reportRx());
+            };
+
+            // Monitor existing media elements
+            document.querySelectorAll('video, audio').forEach(monitorMediaElement);
+
+            // Monitor dynamically added media elements
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeName === 'VIDEO' || node.nodeName === 'AUDIO') {
+                            monitorMediaElement(node);
+                        }
+                        if (node.querySelectorAll) {
+                            node.querySelectorAll('video, audio').forEach(monitorMediaElement);
+                        }
+                    });
+                });
+            });
+            observer.observe(document.documentElement, { childList: true, subtree: true });
+
+            // Intercept sendBeacon
+            if (navigator.sendBeacon) {
+                const originalSendBeacon = navigator.sendBeacon.bind(navigator);
+                navigator.sendBeacon = function(...args) {
+                    reportTx();
+                    return originalSendBeacon(...args);
+                };
+            }
+
+            // Intercept Image loading (for tracking pixels and image requests)
+            const originalImageSrc = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
+            if (originalImageSrc) {
+                Object.defineProperty(HTMLImageElement.prototype, 'src', {
+                    get: originalImageSrc.get,
+                    set: function(value) {
+                        if (value && value.length > 0) {
+                            reportTx();
+                            this.addEventListener('load', () => reportRx(), { once: true });
+                            this.addEventListener('error', () => reportRx(), { once: true });
+                        }
+                        return originalImageSrc.set.call(this, value);
+                    },
+                    configurable: true
+                });
+            }
+
+            console.log('[Barc] Network monitoring active');
+        })();
+        """
+
+        let userScript = WKUserScript(
+            source: script,
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: false
+        )
+        controller.addUserScript(userScript)
+    }
+
+    private func injectPrivacyScripts(into controller: WKUserContentController) {
+        var scriptParts: [String] = []
+
+        scriptParts.append("(function() {")
+
+        // Canvas fingerprint protection
+        if settings.canvasFingerprintProtection {
+            scriptParts.append("""
+                // Spoof canvas fingerprinting
+                const originalToDataURL = HTMLCanvasElement.prototype.toDataURL;
+                HTMLCanvasElement.prototype.toDataURL = function(type) {
+                    if (this.width === 0 || this.height === 0) {
+                        return originalToDataURL.apply(this, arguments);
+                    }
+                    const ctx = this.getContext('2d');
+                    if (ctx) {
+                        try {
+                            const imageData = ctx.getImageData(0, 0, this.width, this.height);
+                            for (let i = 0; i < imageData.data.length; i += 4) {
+                                imageData.data[i] ^= 1;
+                            }
+                            ctx.putImageData(imageData, 0, 0);
+                        } catch(e) {}
+                    }
+                    return originalToDataURL.apply(this, arguments);
+                };
+
+                const originalGetImageData = CanvasRenderingContext2D.prototype.getImageData;
+                CanvasRenderingContext2D.prototype.getImageData = function(...args) {
+                    const imageData = originalGetImageData.apply(this, args);
+                    for (let i = 0; i < imageData.data.length; i += 4) {
+                        imageData.data[i] ^= 1;
+                    }
+                    return imageData;
+                };
+            """)
+        }
+
+        // WebRTC IP leak protection
+        if settings.webRTCProtection {
+            scriptParts.append("""
+                if (window.RTCPeerConnection) {
+                    const originalRTC = window.RTCPeerConnection;
+                    window.RTCPeerConnection = function(...args) {
+                        const config = args[0] || {};
+                        config.iceServers = [];
+                        return new originalRTC(config);
+                    };
+                    window.RTCPeerConnection.prototype = originalRTC.prototype;
+                }
+                if (window.webkitRTCPeerConnection) {
+                    window.webkitRTCPeerConnection = window.RTCPeerConnection;
+                }
+            """)
+        }
+
+        // Hardware fingerprint resistance
+        if settings.hardwareFingerprintResistance {
+            scriptParts.append("""
+                Object.defineProperty(navigator, 'hardwareConcurrency', {
+                    get: function() { return 4; },
+                    configurable: true
+                });
+                Object.defineProperty(navigator, 'deviceMemory', {
+                    get: function() { return 8; },
+                    configurable: true
+                });
+                Object.defineProperty(screen, 'colorDepth', {
+                    get: function() { return 24; },
+                    configurable: true
+                });
+                Object.defineProperty(screen, 'pixelDepth', {
+                    get: function() { return 24; },
+                    configurable: true
+                });
+                Object.defineProperty(navigator, 'plugins', {
+                    get: function() { return []; },
+                    configurable: true
+                });
+                Object.defineProperty(navigator, 'mimeTypes', {
+                    get: function() { return []; },
+                    configurable: true
+                });
+            """)
+        }
+
+        // Tracking pixel blocking
+        if settings.trackingPixelBlocking {
+            scriptParts.append("""
+                const blockedPixelDomains = [
+                    'facebook.com', 'doubleclick.net', 'google-analytics.com',
+                    'googleadservices.com', 'googlesyndication.com', 'amazon-adsystem.com',
+                    'pixel.', 'tracking.', 'analytics.', 'beacon.'
+                ];
+            """)
+        }
+
+        scriptParts.append("})();")
+
+        let fullScript = scriptParts.joined(separator: "\n")
+
+        let script = WKUserScript(
+            source: fullScript,
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: false
+        )
+        controller.addUserScript(script)
+    }
+
+    class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
+        let tab: Tab
+        let settings: PrivacySettings
+        let networkMonitor = NetworkActivityMonitor.shared
+        private var observations: [NSKeyValueObservation] = []
+
+        init(tab: Tab, settings: PrivacySettings) {
+            self.tab = tab
+            self.settings = settings
+        }
+
+        // MARK: - WKScriptMessageHandler
+
+        func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            guard message.name == WebView.networkMessageHandler,
+                  let body = message.body as? [String: Any],
+                  let type = body["type"] as? String else {
+                return
+            }
+
+            switch type {
+            case "tx":
+                networkMonitor.reportTransmit()
+            case "rx":
+                networkMonitor.reportReceive()
+            default:
+                break
+            }
+        }
+
+        func setupObservers(for webView: WKWebView) {
+            observations = [
+                webView.observe(\.title) { [weak self] webView, _ in
+                    DispatchQueue.main.async {
+                        self?.tab.title = webView.title ?? "New Tab"
+                    }
+                },
+                webView.observe(\.url) { [weak self] webView, _ in
+                    DispatchQueue.main.async {
+                        self?.tab.url = webView.url
+                    }
+                },
+                webView.observe(\.isLoading) { [weak self] webView, _ in
+                    DispatchQueue.main.async {
+                        self?.tab.isLoading = webView.isLoading
+                    }
+                },
+                webView.observe(\.canGoBack) { [weak self] webView, _ in
+                    DispatchQueue.main.async {
+                        self?.tab.canGoBack = webView.canGoBack
+                    }
+                },
+                webView.observe(\.canGoForward) { [weak self] webView, _ in
+                    DispatchQueue.main.async {
+                        self?.tab.canGoForward = webView.canGoForward
+                    }
+                },
+                webView.observe(\.estimatedProgress) { [weak self] webView, _ in
+                    DispatchQueue.main.async {
+                        self?.tab.estimatedProgress = webView.estimatedProgress
+                    }
+                }
+            ]
+        }
+
+        // MARK: - WKNavigationDelegate
+
+        func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+            networkMonitor.reportTransmit()
+
+            if settings.trackerBlocking, let url = navigationAction.request.url {
+                let blockedDomains = settings.blockedDomains
+                if blockedDomains.contains(where: { url.host?.contains($0) == true }) {
+                    print("[Barc] Blocked tracker: \(url.host ?? "unknown")")
+                    decisionHandler(.cancel)
+                    return
+                }
+            }
+
+            decisionHandler(.allow)
+        }
+
+        func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
+            networkMonitor.reportReceive()
+            decisionHandler(.allow)
+        }
+
+        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            tab.isLoading = true
+            networkMonitor.reportTransmit()
+        }
+
+        func webView(_ webView: WKWebView, didReceiveServerRedirectForProvisionalNavigation navigation: WKNavigation!) {
+            networkMonitor.reportActivity(tx: true, rx: true)
+        }
+
+        func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+            networkMonitor.reportReceive()
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            tab.isLoading = false
+            tab.updateFromWebView(webView)
+            networkMonitor.reportReceive()
+            fetchFavicon(for: webView)
+        }
+
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            tab.isLoading = false
+        }
+
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            tab.isLoading = false
+        }
+
+        // MARK: - WKUIDelegate
+
+        func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+            if settings.popupBlocking {
+                if let url = navigationAction.request.url {
+                    webView.load(URLRequest(url: url))
+                }
+                return nil
+            }
+            if let url = navigationAction.request.url {
+                webView.load(URLRequest(url: url))
+            }
+            return nil
+        }
+
+        // MARK: - Favicon
+
+        private func fetchFavicon(for webView: WKWebView) {
+            guard let url = webView.url, let host = url.host else { return }
+
+            let faviconURL = URL(string: "https://\(host)/favicon.ico")
+            guard let faviconURL else { return }
+
+            networkMonitor.reportTransmit()
+
+            Task {
+                do {
+                    let (data, _) = try await URLSession.shared.data(from: faviconURL)
+                    networkMonitor.reportReceive()
+                    if let image = NSImage(data: data) {
+                        await MainActor.run {
+                            self.tab.favicon = image
+                        }
+                    }
+                } catch {
+                    networkMonitor.reportReceive()
+                }
+            }
+        }
+    }
+}
