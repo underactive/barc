@@ -40,6 +40,11 @@ This file documents all development work done on Barc with Claude Code, so futur
 - Non-whitelisted data is cleared on app launch and quit
 - Managed in Settings > Barc Privacy > Storage Whitelist
 
+### Sidebar Toggle
+- Default macOS NavigationSplitView sidebar toggle in title bar
+- Keyboard shortcut: ⌘⇧S
+- Animates sidebar show/hide
+
 ### Network Activity Indicators
 - **Rx indicator** (green) - Lights up when receiving data
 - **Tx indicator** (red) - Lights up when transmitting data
@@ -146,6 +151,7 @@ open ~/Library/Developer/Xcode/DerivedData/Barc-*/Build/Products/Debug/Barc.app
 5. **Storage whitelist**: Added domain whitelist for persistent logins (e.g., kagi.com)
 6. **Network indicators**: Added Rx/Tx lights in sidebar
 7. **Comprehensive network monitoring**: JavaScript injection to capture ALL network activity (fetch, XHR, WebSocket, EventSource, media streaming, sendBeacon, images)
+8. **Sidebar toggle**: Using default macOS NavigationSplitView sidebar toggle (⌘⇧S)
 
 ---
 

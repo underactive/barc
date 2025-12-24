@@ -4,6 +4,10 @@ struct ContentView: View {
     @EnvironmentObject var browserState: BrowserState
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
+    private var isSidebarVisible: Bool {
+        columnVisibility != .detailOnly
+    }
+
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             SidebarView()
@@ -34,7 +38,6 @@ struct ContentView: View {
             .frame(minWidth: 400, minHeight: 300)
         }
         .navigationSplitViewStyle(.balanced)
-        .toolbar(.hidden)
         .onAppear {
             setupKeyboardShortcuts()
         }
@@ -45,6 +48,14 @@ struct ContentView: View {
             // Cmd+L to focus address bar
             if event.modifierFlags.contains(.command) && event.keyCode == 37 {
                 // This would need additional implementation
+                return nil
+            }
+
+            // Cmd+Shift+S for sidebar toggle
+            if event.modifierFlags.contains([.command, .shift]) && event.keyCode == 1 {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    columnVisibility = isSidebarVisible ? .detailOnly : .all
+                }
                 return nil
             }
 
