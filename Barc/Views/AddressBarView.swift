@@ -300,11 +300,22 @@ struct NetworkIndicatorsMenu: View {
     @ObservedObject var soundManager: NetworkSoundManager
     @State private var showingPopover = false
 
+    // Filter indicator display based on indicatorScope setting
+    private var showRxIndicator: Bool {
+        networkMonitor.isReceiving &&
+        (networkMonitor.indicatorScope == .allTabs || networkMonitor.lastReceiveWasActiveTab)
+    }
+
+    private var showTxIndicator: Bool {
+        networkMonitor.isTransmitting &&
+        (networkMonitor.indicatorScope == .allTabs || networkMonitor.lastTransmitWasActiveTab)
+    }
+
     var body: some View {
         Button(action: { showingPopover.toggle() }) {
             HStack(spacing: 6) {
-                NetworkIndicator(label: "Rx", isActive: networkMonitor.isReceiving, activeColor: .green)
-                NetworkIndicator(label: "Tx", isActive: networkMonitor.isTransmitting, activeColor: .red)
+                NetworkIndicator(label: "Rx", isActive: showRxIndicator, activeColor: .green)
+                NetworkIndicator(label: "Tx", isActive: showTxIndicator, activeColor: .red)
             }
             .padding(.horizontal, 4)
             .padding(.vertical, 2)

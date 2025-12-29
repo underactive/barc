@@ -76,10 +76,7 @@ class NetworkActivityMonitor: ObservableObject {
                 }
             }
 
-            // Check if we should show indicator based on scope
-            let shouldShow = self.indicatorScope == .allTabs || self.isTabActive(tabId)
-            guard shouldShow else { return }
-
+            // Always update isTransmitting (used by sounds which have their own scope setting)
             self.isTransmitting = true
             self.txTimer?.invalidate()
             self.txTimer = Timer.scheduledTimer(withTimeInterval: self.activityDuration, repeats: false) { [weak self] _ in
@@ -102,10 +99,7 @@ class NetworkActivityMonitor: ObservableObject {
                 }
             }
 
-            // Check if we should show indicator based on scope
-            let shouldShow = self.indicatorScope == .allTabs || self.isTabActive(tabId)
-            guard shouldShow else { return }
-
+            // Always update isReceiving (used by sounds which have their own scope setting)
             self.isReceiving = true
             self.rxTimer?.invalidate()
             self.rxTimer = Timer.scheduledTimer(withTimeInterval: self.activityDuration, repeats: false) { [weak self] _ in
