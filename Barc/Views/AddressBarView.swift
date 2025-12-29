@@ -2,9 +2,52 @@ import SwiftUI
 
 struct AddressBarView: View {
     @EnvironmentObject var browserState: BrowserState
+    @ObservedObject private var privacySettings = PrivacySettings.shared
+    @Environment(\.openSettings) private var openSettings
     @State private var inputText: String = ""
     @State private var isEditing: Bool = false
     @FocusState private var isFocused: Bool
+
+    private var privacyScore: Int {
+        var score = 0
+        if privacySettings.nonPersistentStorage { score += 1 }
+        if privacySettings.canvasFingerprintProtection { score += 1 }
+        if privacySettings.webRTCProtection { score += 1 }
+        if privacySettings.trackerBlocking { score += 1 }
+        if privacySettings.hardwareFingerprintResistance { score += 1 }
+        if privacySettings.trackingPixelBlocking { score += 1 }
+        if privacySettings.popupBlocking { score += 1 }
+        if privacySettings.httpsOnlyMode != .off { score += 1 }
+        if privacySettings.referrerPolicy != .defaultPolicy { score += 1 }
+        return score
+    }
+
+    private var privacyScoreColor: Color {
+        switch privacyScore {
+        case 9: return .green
+        case 7...8: return .blue
+        case 4...6: return .orange
+        default: return .red
+        }
+    }
+
+    private var privacyScoreIcon: String {
+        switch privacyScore {
+        case 9: return "shield.checkered"
+        case 7...8: return "shield.lefthalf.filled"
+        case 4...6: return "shield"
+        default: return "shield.slash"
+        }
+    }
+
+    private var privacyScoreDescription: String {
+        switch privacyScore {
+        case 9: return "Privacy Score: \(privacyScore)/9 - Maximum protection"
+        case 7...8: return "Privacy Score: \(privacyScore)/9 - Strong protection"
+        case 4...6: return "Privacy Score: \(privacyScore)/9 - Moderate protection"
+        default: return "Privacy Score: \(privacyScore)/9 - Limited protection"
+        }
+    }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -94,13 +137,16 @@ struct AddressBarView: View {
             )
 
             // Privacy shield indicator
-            Button(action: {}) {
-                Image(systemName: "shield.checkered")
+            Button(action: {
+                SettingsState.shared.selectedTab = .privacy
+                openSettings()
+            }) {
+                Image(systemName: privacyScoreIcon)
                     .font(.system(size: 14))
-                    .foregroundColor(.green)
+                    .foregroundColor(privacyScoreColor)
             }
             .buttonStyle(.plain)
-            .help("Privacy protections active")
+            .help(privacyScoreDescription)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)

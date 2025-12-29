@@ -70,25 +70,11 @@ struct SidebarView: View {
 
             Spacer()
 
-            // Footer with privacy indicator and network activity
-            HStack(spacing: 12) {
-                // Privacy Mode indicator
-                HStack(spacing: 4) {
-                    Image(systemName: "shield.checkered")
-                        .font(.system(size: 10))
-                        .foregroundColor(.green)
-                    Text("Privacy Mode")
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                }
-
+            // Footer with network activity indicators
+            HStack(spacing: 6) {
                 Spacer()
-
-                // Network activity indicators
-                HStack(spacing: 6) {
-                    NetworkIndicator(label: "Rx", isActive: networkMonitor.isReceiving, activeColor: .green)
-                    NetworkIndicator(label: "Tx", isActive: networkMonitor.isTransmitting, activeColor: .red)
-                }
+                NetworkIndicator(label: "Rx", isActive: networkMonitor.isReceiving, activeColor: .green)
+                NetworkIndicator(label: "Tx", isActive: networkMonitor.isTransmitting, activeColor: .red)
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 12)

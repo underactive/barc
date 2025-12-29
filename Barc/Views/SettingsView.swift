@@ -1,19 +1,38 @@
 import SwiftUI
 
+enum SettingsTab: Int {
+    case general = 0
+    case privacy = 1
+}
+
+class SettingsState: ObservableObject {
+    static let shared = SettingsState()
+    @Published var selectedTab: SettingsTab = .general
+
+    func openPrivacySettings() {
+        selectedTab = .privacy
+        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+    }
+}
+
 struct SettingsView: View {
+    @StateObject private var settingsState = SettingsState.shared
+
     var body: some View {
-        TabView {
+        TabView(selection: $settingsState.selectedTab) {
             GeneralSettingsView()
                 .tabItem {
                     Label("General", systemImage: "gear")
                 }
+                .tag(SettingsTab.general)
 
             PrivacySettingsView()
                 .tabItem {
                     Label("Barc Privacy", systemImage: "shield.checkered")
                 }
+                .tag(SettingsTab.privacy)
         }
-        .frame(width: 550, height: 580)
+        .frame(width: 550, height: 720)
     }
 }
 
@@ -179,6 +198,84 @@ struct PrivacySettingsView: View {
                 .padding(.vertical, 8)
 
             Section {
+                // HTTPS-Only Mode
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "lock.shield")
+                            .font(.system(size: 16))
+                            .foregroundColor(settings.httpsOnlyMode != .off ? .accentColor : .secondary)
+                            .frame(width: 24)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("HTTPS-Only Mode")
+                                .font(.system(size: 13, weight: .medium))
+                            Text("Control how the browser handles insecure HTTP connections.")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                                .lineLimit(2)
+                        }
+
+                        Spacer()
+
+                        Picker("", selection: $settings.httpsOnlyMode) {
+                            ForEach(HTTPSOnlyMode.allCases) { mode in
+                                Text(mode.displayName).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 160)
+                    }
+
+                    Text(settings.httpsOnlyMode.description)
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                        .padding(.leading, 36)
+                }
+                .padding(.vertical, 4)
+
+                // Referrer Policy
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "arrow.left.arrow.right")
+                            .font(.system(size: 16))
+                            .foregroundColor(settings.referrerPolicy != .defaultPolicy ? .accentColor : .secondary)
+                            .frame(width: 24)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Referrer Policy")
+                                .font(.system(size: 13, weight: .medium))
+                            Text("Control what information is sent about your previous page when navigating.")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                                .lineLimit(2)
+                        }
+
+                        Spacer()
+
+                        Picker("", selection: $settings.referrerPolicy) {
+                            ForEach(ReferrerPolicy.allCases) { policy in
+                                Text(policy.displayName).tag(policy)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 160)
+                    }
+
+                    Text(settings.referrerPolicy.description)
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                        .padding(.leading, 36)
+                }
+                .padding(.vertical, 4)
+            } header: {
+                Label("Network Privacy", systemImage: "network.badge.shield.half.filled")
+                    .font(.headline)
+            }
+
+            Divider()
+                .padding(.vertical, 8)
+
+            Section {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Privacy Score")
@@ -227,14 +324,16 @@ struct PrivacySettingsView: View {
         if settings.hardwareFingerprintResistance { score += 1 }
         if settings.trackingPixelBlocking { score += 1 }
         if settings.popupBlocking { score += 1 }
+        if settings.httpsOnlyMode != .off { score += 1 }
+        if settings.referrerPolicy != .defaultPolicy { score += 1 }
         return score
     }
 
     private var privacyScoreDescription: String {
         switch privacyScore {
-        case 7: return "Maximum protection enabled"
-        case 5...6: return "Strong protection"
-        case 3...4: return "Moderate protection"
+        case 9: return "Maximum protection enabled"
+        case 7...8: return "Strong protection"
+        case 4...6: return "Moderate protection"
         default: return "Limited protection"
         }
     }
@@ -397,7 +496,7 @@ struct PrivacyScoreBadge: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Text("\(score)/7")
+            Text("\(score)/9")
                 .font(.system(size: 18, weight: .bold, design: .rounded))
                 .foregroundColor(scoreColor)
             Image(systemName: scoreIcon)
@@ -414,18 +513,18 @@ struct PrivacyScoreBadge: View {
 
     private var scoreColor: Color {
         switch score {
-        case 7: return .green
-        case 5...6: return .blue
-        case 3...4: return .orange
+        case 9: return .green
+        case 7...8: return .blue
+        case 4...6: return .orange
         default: return .red
         }
     }
 
     private var scoreIcon: String {
         switch score {
-        case 7: return "shield.checkered"
-        case 5...6: return "shield.lefthalf.filled"
-        case 3...4: return "shield"
+        case 9: return "shield.checkered"
+        case 7...8: return "shield.lefthalf.filled"
+        case 4...6: return "shield"
         default: return "shield.slash"
         }
     }

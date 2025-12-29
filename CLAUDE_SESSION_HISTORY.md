@@ -33,6 +33,8 @@ This file documents all development work done on Barc with Claude Code, so futur
 6. **Tracking Pixel Blocking** - Blocks common tracking pixel domains
 7. **Popup Blocking** - Prevents unwanted popups
 8. **Fraudulent Website Warning** - WebKit's built-in protection
+9. **HTTPS-Only Mode** - Three modes: Off, Upgrade (auto-upgrade HTTP→HTTPS), Strict (block HTTP)
+10. **Referrer Policy Control** - Control what information is sent about previous page (6 policy options)
 
 ### Domain Whitelist for Persistent Storage
 - Users can whitelist domains (e.g., kagi.com) to stay logged in
@@ -48,7 +50,7 @@ This file documents all development work done on Barc with Claude Code, so futur
 ### Network Activity Indicators
 - **Rx indicator** (green) - Lights up when receiving data
 - **Tx indicator** (red) - Lights up when transmitting data
-- Located in sidebar footer next to "Privacy Mode" label
+- Located in sidebar footer (bottom right)
 - Comprehensive JavaScript injection intercepts ALL network activity:
   - `fetch()` API calls
   - `XMLHttpRequest` operations
@@ -59,9 +61,20 @@ This file documents all development work done on Barc with Claude Code, so futur
   - `HTMLImageElement.src` changes (tracking pixels, images)
 - Uses `WKScriptMessageHandler` to bridge JS events to Swift
 
+### Privacy Score Indicator (Address Bar)
+- **Dynamic icon** in address bar (right side) reflects current Privacy Score:
+  - 9/9: `shield.checkered` (green) - Maximum protection
+  - 7-8/9: `shield.lefthalf.filled` (blue) - Strong protection
+  - 4-6/9: `shield` (orange) - Moderate protection
+  - 0-3/9: `shield.slash` (red) - Limited protection
+- **Hover tooltip** shows: "Privacy Score: X/9 - [protection level]"
+- **Clickable**: Opens Settings window directly to Barc Privacy tab
+- Updates in real-time when privacy settings change
+
 ### Settings Window
 - **General tab**: Homepage URL, default search engine
 - **Barc Privacy tab**: All privacy feature toggles + storage whitelist management
+- `SettingsState.shared` manages selected tab for programmatic navigation
 
 ### App Icon
 - Custom icon from `/Users/esison/Downloads/barc_icon.png`
@@ -83,13 +96,14 @@ Barc/
 ├── Views/
 │   ├── ContentView.swift      # Main layout (sidebar + webview)
 │   ├── SidebarView.swift      # Arc-style tabs, network indicators
-│   ├── AddressBarView.swift   # URL bar + navigation buttons
+│   ├── AddressBarView.swift   # URL bar, navigation, privacy score indicator
 │   ├── WebView.swift          # WKWebView wrapper, privacy scripts, network monitoring JS
-│   └── SettingsView.swift     # Settings window with General + Privacy tabs
+│   └── SettingsView.swift     # Settings window, SettingsState for tab navigation
 ├── Assets.xcassets/
 │   └── AppIcon.appiconset/    # All icon sizes
 ├── Barc.entitlements          # App entitlements
 └── Info.plist
+.gitignore                     # Git ignore for macOS/Xcode projects
 CONTRIBUTING.md                # Developer onboarding documentation
 CLAUDE_SESSION_HISTORY.md      # This file
 ```
@@ -116,16 +130,21 @@ BarcApp
 ├── BrowserState (manages tabs)
 │   └── Tab[] (each has WebView reference)
 ├── PrivacySettings.shared (singleton, persisted with @AppStorage)
-└── NetworkActivityMonitor.shared (singleton for Rx/Tx)
+├── NetworkActivityMonitor.shared (singleton for Rx/Tx)
+└── SettingsState.shared (singleton for settings tab navigation)
 
 ContentView
 ├── SidebarView (shows tabs, network indicators)
 │   └── Uses NetworkActivityMonitor.shared
-└── WebView (per tab)
-    ├── Injects network monitoring JS → posts to Swift via messageHandler
-    ├── Injects privacy protection JS
-    ├── Coordinator handles WKNavigationDelegate, WKScriptMessageHandler
-    └── Reports to NetworkActivityMonitor.shared
+└── AddressBarView
+    ├── Privacy score indicator (reads PrivacySettings, opens Settings on click)
+    └── Uses SettingsState.shared + @Environment(\.openSettings)
+
+WebView (per tab)
+├── Injects network monitoring JS → posts to Swift via messageHandler
+├── Injects privacy protection JS
+├── Coordinator handles WKNavigationDelegate, WKScriptMessageHandler
+└── Reports to NetworkActivityMonitor.shared
 ```
 
 ---
@@ -152,6 +171,9 @@ open ~/Library/Developer/Xcode/DerivedData/Barc-*/Build/Products/Debug/Barc.app
 6. **Network indicators**: Added Rx/Tx lights in sidebar
 7. **Comprehensive network monitoring**: JavaScript injection to capture ALL network activity (fetch, XHR, WebSocket, EventSource, media streaming, sendBeacon, images)
 8. **Sidebar toggle**: Using default macOS NavigationSplitView sidebar toggle (⌘⇧S)
+9. **Privacy score indicator**: Dynamic shield icon in address bar reflecting privacy score with color/icon changes, tooltip, and click-to-open settings
+10. **HTTPS-Only Mode**: Added three modes (Off, Upgrade, Strict) - auto-upgrades HTTP to HTTPS or blocks HTTP entirely
+11. **Referrer Policy Control**: Added 6 referrer policy options to control what information is shared when navigating between pages
 
 ---
 
@@ -168,3 +190,24 @@ open ~/Library/Developer/Xcode/DerivedData/Barc-*/Build/Products/Debug/Barc.app
 ---
 
 *Last updated: December 2024*
+
+---
+
+## Recent Changes (December 2024)
+
+### HTTPS-Only Mode
+- **Off**: Allow all HTTP connections
+- **Upgrade** (default): Automatically upgrade HTTP URLs to HTTPS
+- **Strict**: Block all non-HTTPS connections, show error page
+
+Implementation: WKNavigationDelegate intercepts navigation requests and either upgrades HTTP→HTTPS or blocks with an error page.
+
+### Referrer Policy Control
+- **Default**: Browser default behavior
+- **No Referrer**: Never send referrer information
+- **Origin Only**: Send only the domain, not full URL
+- **Same Origin**: Send referrer only for same-origin requests
+- **Strict Origin** (default): Send origin on HTTPS→HTTPS, nothing on HTTPS→HTTP
+- **Strict Origin When Cross-Origin**: Full URL for same-origin, origin only for cross-origin
+
+Implementation: JavaScript injection adds `<meta name="referrer">` tag and optionally overrides `document.referrer` property.

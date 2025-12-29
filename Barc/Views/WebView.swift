@@ -338,6 +338,31 @@ struct WebView: NSViewRepresentable {
             """)
         }
 
+        // Referrer Policy
+        let referrerPolicy = settings.referrerPolicy.webValue
+        if !referrerPolicy.isEmpty {
+            scriptParts.append("""
+                // Set referrer policy
+                (function() {
+                    // Set meta tag for referrer policy
+                    const meta = document.createElement('meta');
+                    meta.name = 'referrer';
+                    meta.content = '\(referrerPolicy)';
+                    document.head.appendChild(meta);
+
+                    // Override document.referrer if no-referrer
+                    if ('\(referrerPolicy)' === 'no-referrer') {
+                        Object.defineProperty(document, 'referrer', {
+                            get: function() { return ''; },
+                            configurable: true
+                        });
+                    }
+
+                    console.log('[Barc] Referrer policy set to: \(referrerPolicy)');
+                })();
+            """)
+        }
+
         scriptParts.append("})();")
 
         let fullScript = scriptParts.joined(separator: "\n")
@@ -420,7 +445,59 @@ struct WebView: NSViewRepresentable {
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
             networkMonitor.reportTransmit()
 
-            if settings.trackerBlocking, let url = navigationAction.request.url {
+            guard let url = navigationAction.request.url else {
+                decisionHandler(.allow)
+                return
+            }
+
+            // HTTPS-Only Mode handling
+            if url.scheme == "http" {
+                switch settings.httpsOnlyMode {
+                case .upgrade:
+                    // Upgrade HTTP to HTTPS
+                    if var components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
+                        components.scheme = "https"
+                        if let httpsURL = components.url {
+                            print("[Barc] Upgrading to HTTPS: \(httpsURL)")
+                            decisionHandler(.cancel)
+                            webView.load(URLRequest(url: httpsURL))
+                            return
+                        }
+                    }
+                case .strict:
+                    // Block HTTP entirely
+                    print("[Barc] Blocked insecure HTTP connection: \(url)")
+                    decisionHandler(.cancel)
+                    // Show error page
+                    let errorHTML = """
+                    <html>
+                    <head>
+                        <style>
+                            body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 40px; text-align: center; background: #1a1a1a; color: #fff; }
+                            h1 { color: #ff6b6b; }
+                            .shield { font-size: 64px; margin-bottom: 20px; }
+                            p { color: #888; max-width: 400px; margin: 20px auto; }
+                            a { color: #4dabf7; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="shield">🛡️</div>
+                        <h1>Connection Not Secure</h1>
+                        <p>Barc blocked this connection because it uses HTTP instead of HTTPS.</p>
+                        <p>HTTPS-Only Mode is enabled to protect your privacy.</p>
+                        <p><small>Attempted URL: \(url.absoluteString)</small></p>
+                    </body>
+                    </html>
+                    """
+                    webView.loadHTMLString(errorHTML, baseURL: nil)
+                    return
+                case .off:
+                    break
+                }
+            }
+
+            // Tracker blocking
+            if settings.trackerBlocking {
                 let blockedDomains = settings.blockedDomains
                 if blockedDomains.contains(where: { url.host?.contains($0) == true }) {
                     print("[Barc] Blocked tracker: \(url.host ?? "unknown")")
