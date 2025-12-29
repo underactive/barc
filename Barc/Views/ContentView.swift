@@ -19,11 +19,15 @@ struct ContentView: View {
 
                 // Web content
                 ZStack {
-                    if let tab = browserState.selectedTab {
-                        WebView(tab: tab)
-                            .id(tab.id)
-                    } else {
+                    if browserState.tabs.isEmpty {
                         EmptyStateView()
+                    } else {
+                        // Keep all WebViews in memory, show only the selected one
+                        ForEach(browserState.tabs) { tab in
+                            WebView(tab: tab)
+                                .opacity(browserState.selectedTabId == tab.id ? 1 : 0)
+                                .allowsHitTesting(browserState.selectedTabId == tab.id)
+                        }
                     }
                 }
             }
