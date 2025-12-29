@@ -253,7 +253,8 @@ struct GeneralSettingsView: View {
 struct PrivacySettingsView: View {
     @ObservedObject private var settings = PrivacySettings.shared
     @State private var showingResetConfirmation = false
-    @State private var newDomain: String = ""
+    @State private var newWhitelistDomain: String = ""
+    @State private var newBlockedDomain: String = ""
     @State private var showingClearDataConfirmation = false
 
     var body: some View {
@@ -267,7 +268,7 @@ struct PrivacySettingsView: View {
                 )
 
                 // Storage Whitelist
-                StorageWhitelistView(settings: settings, newDomain: $newDomain)
+                StorageWhitelistView(settings: settings, newDomain: $newWhitelistDomain)
 
                 PrivacyToggleRow(
                     title: "Canvas Fingerprint Protection",
@@ -298,12 +299,7 @@ struct PrivacySettingsView: View {
                 .padding(.vertical, 8)
 
             Section {
-                PrivacyToggleRow(
-                    title: "Tracker Blocking",
-                    description: "Block requests to known advertising and analytics domains.",
-                    systemImage: "eye.slash",
-                    isOn: $settings.trackerBlocking
-                )
+                TrackerBlockingRow(settings: settings)
 
                 PrivacyToggleRow(
                     title: "Tracking Pixel Blocking",
@@ -325,6 +321,9 @@ struct PrivacySettingsView: View {
                     systemImage: "cookie",
                     isOn: $settings.thirdPartyCookieBlocking
                 )
+
+                // Custom Blocklist
+                CustomBlocklistView(settings: settings, newDomain: $newBlockedDomain)
             } header: {
                 Label("Content Blocking", systemImage: "shield.lefthalf.filled")
                     .font(.headline)
@@ -601,6 +600,216 @@ struct StorageWhitelistView: View {
         let trimmed = newDomain.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
         settings.addWhitelistedDomain(trimmed)
+        newDomain = ""
+    }
+}
+
+struct TrackerBlockingRow: View {
+    @ObservedObject var settings: PrivacySettings
+    @State private var showingDomainList = false
+
+    private let blockedDomains = [
+        ("doubleclick.net", "Google advertising"),
+        ("googleadservices.com", "Google ads"),
+        ("googlesyndication.com", "Google ad syndication"),
+        ("google-analytics.com", "Google Analytics"),
+        ("facebook.net", "Facebook scripts"),
+        ("connect.facebook.com", "Facebook Connect"),
+        ("facebook.com/tr", "Facebook tracking pixel"),
+        ("amazon-adsystem.com", "Amazon ads"),
+        ("adnxs.com", "AppNexus (Microsoft)"),
+        ("adsrvr.org", "The Trade Desk"),
+        ("criteo.com", "Criteo retargeting"),
+        ("criteo.net", "Criteo retargeting"),
+        ("outbrain.com", "Outbrain content ads"),
+        ("taboola.com", "Taboola content ads"),
+        ("scorecardresearch.com", "comScore analytics"),
+        ("quantserve.com", "Quantcast"),
+        ("rubiconproject.com", "Rubicon Project"),
+        ("pubmatic.com", "PubMatic ads"),
+        ("openx.net", "OpenX ads"),
+        ("casalemedia.com", "Index Exchange"),
+        ("advertising.com", "AOL/Verizon advertising"),
+        ("bluekai.com", "Oracle Data Cloud"),
+        ("exelator.com", "Nielsen eXelate"),
+        ("turn.com", "Amobee"),
+        ("everesttech.net", "Adobe Advertising Cloud")
+    ]
+
+    var body: some View {
+        Toggle(isOn: $settings.trackerBlocking) {
+            HStack(spacing: 12) {
+                Image(systemName: "eye.slash")
+                    .font(.system(size: 16))
+                    .foregroundColor(settings.trackerBlocking ? .accentColor : .secondary)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Tracker Blocking")
+                        .font(.system(size: 13, weight: .medium))
+                    HStack(spacing: 0) {
+                        Text("Block requests to known advertising and analytics domains. ")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                        Button("View list") {
+                            showingDomainList = true
+                        }
+                        .font(.system(size: 11))
+                        .buttonStyle(.plain)
+                        .foregroundColor(.accentColor)
+                    }
+                }
+            }
+        }
+        .toggleStyle(.switch)
+        .padding(.vertical, 4)
+        .popover(isPresented: $showingDomainList, arrowEdge: .trailing) {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack {
+                    Text("Blocked Tracker Domains")
+                        .font(.system(size: 13, weight: .semibold))
+                    Spacer()
+                    Text("\(blockedDomains.count) domains")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(Color(NSColor.controlBackgroundColor))
+
+                Divider()
+
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(blockedDomains, id: \.0) { domain, description in
+                            HStack {
+                                Image(systemName: "xmark.shield")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.red.opacity(0.7))
+                                    .frame(width: 16)
+
+                                Text(domain)
+                                    .font(.system(size: 11, design: .monospaced))
+                                    .foregroundColor(.primary)
+
+                                Spacer()
+
+                                Text(description)
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+
+                            if domain != blockedDomains.last?.0 {
+                                Divider()
+                                    .padding(.leading, 28)
+                            }
+                        }
+                    }
+                }
+                .frame(maxHeight: 300)
+            }
+            .frame(width: 380)
+        }
+    }
+}
+
+struct CustomBlocklistView: View {
+    @ObservedObject var settings: PrivacySettings
+    @Binding var newDomain: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Toggle and description
+            Toggle(isOn: $settings.customBlocklistEnabled) {
+                HStack(spacing: 12) {
+                    Image(systemName: "list.bullet.rectangle")
+                        .font(.system(size: 16))
+                        .foregroundColor(settings.customBlocklistEnabled ? .accentColor : .secondary)
+                        .frame(width: 24)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Custom Blocklist")
+                            .font(.system(size: 13, weight: .medium))
+                        Text("Block requests to your own list of domains.")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .lineLimit(2)
+                    }
+                }
+            }
+            .toggleStyle(.switch)
+
+            // Add domain input
+            HStack(spacing: 8) {
+                TextField("e.g., ads.example.com", text: $newDomain)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 12))
+                    .onSubmit {
+                        addDomain()
+                    }
+                    .disabled(!settings.customBlocklistEnabled)
+
+                Button(action: addDomain) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 16))
+                }
+                .buttonStyle(.borderless)
+                .foregroundColor(.accentColor)
+                .disabled(newDomain.trimmingCharacters(in: .whitespaces).isEmpty || !settings.customBlocklistEnabled)
+            }
+            .padding(.leading, 36)
+            .opacity(settings.customBlocklistEnabled ? 1.0 : 0.5)
+
+            // Blocked domains list
+            if !settings.customBlockedDomains.isEmpty {
+                VStack(spacing: 4) {
+                    ForEach(settings.customBlockedDomains, id: \.self) { domain in
+                        HStack {
+                            Image(systemName: "xmark.shield")
+                                .font(.system(size: 11))
+                                .foregroundColor(.red.opacity(0.7))
+
+                            Text(domain)
+                                .font(.system(size: 12))
+                                .foregroundColor(.primary)
+
+                            Spacer()
+
+                            Button(action: { settings.removeCustomBlockedDomain(domain) }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .opacity(0.7)
+                            .help("Remove \(domain) from blocklist")
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color(NSColor.controlBackgroundColor))
+                        )
+                    }
+                }
+                .padding(.leading, 36)
+                .opacity(settings.customBlocklistEnabled ? 1.0 : 0.5)
+            } else if settings.customBlocklistEnabled {
+                Text("No domains blocked. Add domains above to block them.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .padding(.leading, 36)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func addDomain() {
+        let trimmed = newDomain.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        settings.addCustomBlockedDomain(trimmed)
         newDomain = ""
     }
 }

@@ -6,6 +6,7 @@ class PrivacySettings: ObservableObject {
     static let shared = PrivacySettings()
 
     private let whitelistKey = "privacy.storageWhitelist"
+    private let customBlocklistKey = "privacy.customBlocklist"
 
     // MARK: - Privacy Toggles
 
@@ -22,8 +23,22 @@ class PrivacySettings: ObservableObject {
         }
     }
 
+    // MARK: - Custom Blocklist
+
+    @AppStorage("privacy.customBlocklistEnabled") var customBlocklistEnabled: Bool = false {
+        didSet { objectWillChange.send() }
+    }
+
+    @Published var customBlockedDomains: [String] = [] {
+        didSet {
+            saveCustomBlocklist()
+            objectWillChange.send()
+        }
+    }
+
     private init() {
         loadWhitelist()
+        loadCustomBlocklist()
     }
 
     private func loadWhitelist() {
@@ -53,6 +68,38 @@ class PrivacySettings: ObservableObject {
         guard let host = url?.host?.lowercased() else { return false }
         return whitelistedDomains.contains { whitelisted in
             host == whitelisted || host.hasSuffix(".\(whitelisted)")
+        }
+    }
+
+    // MARK: - Custom Blocklist Management
+
+    private func loadCustomBlocklist() {
+        if let data = UserDefaults.standard.data(forKey: customBlocklistKey),
+           let domains = try? JSONDecoder().decode([String].self, from: data) {
+            customBlockedDomains = domains
+        }
+    }
+
+    private func saveCustomBlocklist() {
+        if let data = try? JSONEncoder().encode(customBlockedDomains) {
+            UserDefaults.standard.set(data, forKey: customBlocklistKey)
+        }
+    }
+
+    func addCustomBlockedDomain(_ domain: String) {
+        let normalized = normalizeDomain(domain)
+        guard !normalized.isEmpty, !customBlockedDomains.contains(normalized) else { return }
+        customBlockedDomains.append(normalized)
+    }
+
+    func removeCustomBlockedDomain(_ domain: String) {
+        customBlockedDomains.removeAll { $0 == domain }
+    }
+
+    func isDomainCustomBlocked(_ url: URL?) -> Bool {
+        guard customBlocklistEnabled, let host = url?.host?.lowercased() else { return false }
+        return customBlockedDomains.contains { blocked in
+            host == blocked || host.hasSuffix(".\(blocked)")
         }
     }
 
@@ -168,9 +215,9 @@ class PrivacySettings: ObservableObject {
 
     // MARK: - Blocked Domains
 
-    var blockedDomains: [String] {
-        guard trackerBlocking else { return [] }
-        return [
+    /// Built-in tracker domains (used when trackerBlocking is enabled)
+    private var builtInBlockedDomains: [String] {
+        [
             "doubleclick.net",
             "googleadservices.com",
             "googlesyndication.com",
@@ -199,6 +246,23 @@ class PrivacySettings: ObservableObject {
         ]
     }
 
+    /// Combined list of all blocked domains (built-in trackers + custom blocklist)
+    var blockedDomains: [String] {
+        var domains: [String] = []
+
+        // Add built-in tracker domains if tracker blocking is enabled
+        if trackerBlocking {
+            domains.append(contentsOf: builtInBlockedDomains)
+        }
+
+        // Add custom blocked domains if custom blocklist is enabled
+        if customBlocklistEnabled {
+            domains.append(contentsOf: customBlockedDomains)
+        }
+
+        return domains
+    }
+
     var searchEngineURL: String {
         searchEngine.searchURL
     }
@@ -217,6 +281,7 @@ class PrivacySettings: ObservableObject {
         fraudulentWebsiteWarning = true
         httpsOnlyMode = .upgrade
         referrerPolicy = .strictOrigin
+        customBlocklistEnabled = false
         searchEngine = .kagi
         homePage = "https://kagi.com"
         newTabBehavior = .homePage
