@@ -143,6 +143,26 @@ struct GeneralSettingsView: View {
                 .toggleStyle(.switch)
                 .disabled(!soundManager.isEnabled)
                 .opacity(soundManager.isEnabled ? 1.0 : 0.5)
+
+                HStack(spacing: 12) {
+                    Image(systemName: "speaker.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+
+                    Slider(value: $soundManager.volume, in: 0...1)
+                        .frame(maxWidth: 200)
+
+                    Image(systemName: "speaker.wave.3.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+
+                    Text("\(Int(soundManager.volume * 100))%")
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .frame(width: 40, alignment: .trailing)
+                }
+                .disabled(!soundManager.isEnabled)
+                .opacity(soundManager.isEnabled ? 1.0 : 0.5)
             } header: {
                 Label("Sounds", systemImage: "speaker.wave.2")
                     .font(.headline)

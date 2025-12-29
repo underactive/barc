@@ -37,6 +37,18 @@ class NetworkSoundManager: ObservableObject {
         }
     }
 
+    @Published var volume: Float {
+        didSet {
+            UserDefaults.standard.set(volume, forKey: "sound.volume")
+            updateVolume()
+        }
+    }
+
+    private func updateVolume() {
+        txPlayerNode?.volume = volume
+        rxPlayerNode?.volume = volume
+    }
+
     private init() {
         self.isEnabled = UserDefaults.standard.bool(forKey: "sound.networkActivity")
 
@@ -47,8 +59,13 @@ class NetworkSoundManager: ObservableObject {
         if UserDefaults.standard.object(forKey: "sound.txEnabled") == nil {
             UserDefaults.standard.set(true, forKey: "sound.txEnabled")
         }
+        // Default volume to 50%
+        if UserDefaults.standard.object(forKey: "sound.volume") == nil {
+            UserDefaults.standard.set(Float(0.5), forKey: "sound.volume")
+        }
         self.rxEnabled = UserDefaults.standard.bool(forKey: "sound.rxEnabled")
         self.txEnabled = UserDefaults.standard.bool(forKey: "sound.txEnabled")
+        self.volume = UserDefaults.standard.float(forKey: "sound.volume")
 
         if isEnabled {
             setupAudioEngine()
@@ -103,6 +120,10 @@ class NetworkSoundManager: ObservableObject {
 
         audioEngine.connect(txPlayerNode, to: audioEngine.mainMixerNode, format: format)
         audioEngine.connect(rxPlayerNode, to: audioEngine.mainMixerNode, format: format)
+
+        // Apply volume setting
+        txPlayerNode.volume = volume
+        rxPlayerNode.volume = volume
 
         // Generate the static noise buffers
         txBuffer = generateModemStaticBuffer(format: format, frequency: 2400, duration: 0.08) // Higher pitch for Tx
