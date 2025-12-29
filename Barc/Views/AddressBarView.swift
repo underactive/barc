@@ -3,6 +3,7 @@ import SwiftUI
 struct AddressBarView: View {
     @EnvironmentObject var browserState: BrowserState
     @ObservedObject private var privacySettings = PrivacySettings.shared
+    @StateObject private var networkMonitor = NetworkActivityMonitor.shared
     @Environment(\.openSettings) private var openSettings
     @State private var inputText: String = ""
     @State private var isEditing: Bool = false
@@ -154,6 +155,12 @@ struct AddressBarView: View {
             }
             .buttonStyle(.plain)
             .help(privacyScoreDescription)
+
+            // Network activity indicators
+            HStack(spacing: 6) {
+                NetworkIndicator(label: "Rx", isActive: networkMonitor.isReceiving, activeColor: .green)
+                NetworkIndicator(label: "Tx", isActive: networkMonitor.isTransmitting, activeColor: .red)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
@@ -200,6 +207,29 @@ struct LoadingProgressView: View {
             }
         }
         .frame(height: 2)
+    }
+}
+
+// MARK: - Network Activity Indicator
+
+struct NetworkIndicator: View {
+    let label: String
+    let isActive: Bool
+    let activeColor: Color
+
+    var body: some View {
+        HStack(spacing: 3) {
+            Circle()
+                .fill(isActive ? activeColor : Color.gray.opacity(0.3))
+                .frame(width: 6, height: 6)
+                .shadow(color: isActive ? activeColor.opacity(0.6) : .clear, radius: 2)
+                .animation(.easeInOut(duration: 0.1), value: isActive)
+
+            Text(label)
+                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                .foregroundColor(isActive ? activeColor : .secondary.opacity(0.5))
+                .animation(.easeInOut(duration: 0.1), value: isActive)
+        }
     }
 }
 

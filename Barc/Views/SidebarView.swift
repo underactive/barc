@@ -2,7 +2,6 @@ import SwiftUI
 
 struct SidebarView: View {
     @EnvironmentObject var browserState: BrowserState
-    @StateObject private var networkMonitor = NetworkActivityMonitor.shared
     @State private var hoveredTabId: UUID?
 
     var body: some View {
@@ -69,41 +68,9 @@ struct SidebarView: View {
             }
 
             Spacer()
-
-            // Footer with network activity indicators
-            HStack(spacing: 6) {
-                Spacer()
-                NetworkIndicator(label: "Rx", isActive: networkMonitor.isReceiving, activeColor: .green)
-                NetworkIndicator(label: "Tx", isActive: networkMonitor.isTransmitting, activeColor: .red)
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 12)
         }
         .frame(width: 220)
         .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
-    }
-}
-
-// MARK: - Network Activity Indicator
-
-struct NetworkIndicator: View {
-    let label: String
-    let isActive: Bool
-    let activeColor: Color
-
-    var body: some View {
-        HStack(spacing: 3) {
-            Circle()
-                .fill(isActive ? activeColor : Color.gray.opacity(0.3))
-                .frame(width: 6, height: 6)
-                .shadow(color: isActive ? activeColor.opacity(0.6) : .clear, radius: 2)
-                .animation(.easeInOut(duration: 0.1), value: isActive)
-
-            Text(label)
-                .font(.system(size: 9, weight: .medium, design: .monospaced))
-                .foregroundColor(isActive ? activeColor : .secondary.opacity(0.5))
-                .animation(.easeInOut(duration: 0.1), value: isActive)
-        }
     }
 }
 
