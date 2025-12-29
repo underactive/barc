@@ -168,28 +168,11 @@ struct AddressBarView: View {
             .buttonStyle(.plain)
             .help(privacyScoreDescription)
 
-            // Network activity indicators
-            HStack(spacing: 6) {
-                NetworkIndicator(label: "Rx", isActive: networkMonitor.isReceiving, activeColor: .green)
-                NetworkIndicator(label: "Tx", isActive: networkMonitor.isTransmitting, activeColor: .red)
-            }
-            .contextMenu {
-                Toggle(isOn: $soundManager.isEnabled) {
-                    Label("Network Sounds", systemImage: soundManager.isEnabled ? "speaker.wave.2" : "speaker.slash")
-                }
-
-                Divider()
-
-                Toggle(isOn: $soundManager.rxEnabled) {
-                    Label("Rx (Receive) Sound", systemImage: "arrow.down.circle")
-                }
-                .disabled(!soundManager.isEnabled)
-
-                Toggle(isOn: $soundManager.txEnabled) {
-                    Label("Tx (Transmit) Sound", systemImage: "arrow.up.circle")
-                }
-                .disabled(!soundManager.isEnabled)
-            }
+            // Network activity indicators with popover menu
+            NetworkIndicatorsMenu(
+                networkMonitor: networkMonitor,
+                soundManager: soundManager
+            )
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
@@ -296,6 +279,68 @@ struct LoadingProgressView: View {
             }
         }
         .frame(height: 2)
+    }
+}
+
+// MARK: - Network Indicators Menu
+
+struct NetworkIndicatorsMenu: View {
+    @ObservedObject var networkMonitor: NetworkActivityMonitor
+    @ObservedObject var soundManager: NetworkSoundManager
+    @State private var showingPopover = false
+
+    var body: some View {
+        Button(action: { showingPopover.toggle() }) {
+            HStack(spacing: 6) {
+                NetworkIndicator(label: "Rx", isActive: networkMonitor.isReceiving, activeColor: .green)
+                NetworkIndicator(label: "Tx", isActive: networkMonitor.isTransmitting, activeColor: .red)
+            }
+            .padding(.horizontal, 4)
+            .padding(.vertical, 2)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $showingPopover, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Label("Network Sounds", systemImage: soundManager.isEnabled ? "speaker.wave.2" : "speaker.slash")
+                        .lineLimit(1)
+                    Spacer()
+                    Toggle("", isOn: $soundManager.isEnabled)
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                        .labelsHidden()
+                }
+
+                Divider()
+
+                HStack {
+                    Label("Rx (Receive)", systemImage: "arrow.down.circle")
+                        .lineLimit(1)
+                    Spacer()
+                    Toggle("", isOn: $soundManager.rxEnabled)
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                        .labelsHidden()
+                        .disabled(!soundManager.isEnabled)
+                }
+                .opacity(soundManager.isEnabled ? 1.0 : 0.5)
+
+                HStack {
+                    Label("Tx (Transmit)", systemImage: "arrow.up.circle")
+                        .lineLimit(1)
+                    Spacer()
+                    Toggle("", isOn: $soundManager.txEnabled)
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                        .labelsHidden()
+                        .disabled(!soundManager.isEnabled)
+                }
+                .opacity(soundManager.isEnabled ? 1.0 : 0.5)
+            }
+            .padding(12)
+            .fixedSize()
+        }
     }
 }
 
