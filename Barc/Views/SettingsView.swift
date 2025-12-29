@@ -40,6 +40,7 @@ struct SettingsView: View {
 
 struct GeneralSettingsView: View {
     @ObservedObject private var settings = PrivacySettings.shared
+    @ObservedObject private var soundManager = NetworkSoundManager.shared
     @State private var homePageText: String = ""
 
     var body: some View {
@@ -99,6 +100,51 @@ struct GeneralSettingsView: View {
                 Toggle("Warn when visiting a fraudulent website", isOn: $settings.fraudulentWebsiteWarning)
             } header: {
                 Label("Security", systemImage: "lock.shield")
+                    .font(.headline)
+            }
+
+            Divider()
+                .padding(.vertical, 8)
+
+            Section {
+                Toggle(isOn: $soundManager.isEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Network Activity Sounds")
+                            .font(.system(size: 13, weight: .medium))
+                        Text("Play retro modem sounds when transmitting or receiving data.")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .toggleStyle(.switch)
+
+                Toggle(isOn: $soundManager.rxEnabled) {
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(soundManager.isEnabled && soundManager.rxEnabled ? .green : .gray.opacity(0.3))
+                            .frame(width: 8, height: 8)
+                        Text("Rx (Receive) Sound")
+                            .font(.system(size: 13))
+                    }
+                }
+                .toggleStyle(.switch)
+                .disabled(!soundManager.isEnabled)
+                .opacity(soundManager.isEnabled ? 1.0 : 0.5)
+
+                Toggle(isOn: $soundManager.txEnabled) {
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(soundManager.isEnabled && soundManager.txEnabled ? .red : .gray.opacity(0.3))
+                            .frame(width: 8, height: 8)
+                        Text("Tx (Transmit) Sound")
+                            .font(.system(size: 13))
+                    }
+                }
+                .toggleStyle(.switch)
+                .disabled(!soundManager.isEnabled)
+                .opacity(soundManager.isEnabled ? 1.0 : 0.5)
+            } header: {
+                Label("Sounds", systemImage: "speaker.wave.2")
                     .font(.headline)
             }
         }

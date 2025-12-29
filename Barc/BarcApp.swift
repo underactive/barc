@@ -55,8 +55,12 @@ struct BarcApp: App {
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     private let settings = PrivacySettings.shared
+    private let soundManager = NetworkSoundManager.shared
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Initialize sound manager (it will start observing if enabled)
+        _ = soundManager
+
         // Clear non-whitelisted data on launch if non-persistent storage is enabled
         if settings.nonPersistentStorage {
             settings.clearNonWhitelistedData()

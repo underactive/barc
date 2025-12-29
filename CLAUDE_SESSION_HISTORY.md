@@ -176,6 +176,7 @@ open ~/Library/Developer/Xcode/DerivedData/Barc-*/Build/Products/Debug/Barc.app
 10. **HTTPS-Only Mode**: Added three modes (Off, Upgrade, Strict) - auto-upgrades HTTP to HTTPS or blocks HTTP entirely
 11. **Referrer Policy Control**: Added 6 referrer policy options to control what information is shared when navigating between pages
 12. **Third-Party Cookie Blocking**: Uses WKContentRuleList to block cookies from third-party domains
+13. **Network Activity Sounds**: Retro modem-style sounds when transmitting/receiving data (toggleable in Settings > General)
 
 ---
 
@@ -223,3 +224,14 @@ Blocks cookies set by domains other than the site you're visiting. Uses WKConten
 }]
 ```
 This prevents cross-site tracking while allowing first-party cookies needed for login sessions.
+
+### Network Activity Indicators Moved
+Rx/Tx indicators moved from sidebar footer to address bar (right of privacy shield icon).
+
+### Network Activity Sounds
+Retro dialup modem-style sounds that play when network activity occurs:
+- **Tx sound**: Higher pitch (2400 Hz carrier) - plays on data transmission
+- **Rx sound**: Lower pitch (1200 Hz carrier) - plays on data reception
+- Sounds are generated programmatically using AVAudioEngine with carrier waves, harmonics, and noise
+- Toggle in Settings > General > Sounds
+- Disabled by default
