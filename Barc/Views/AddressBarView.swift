@@ -143,6 +143,17 @@ struct AddressBarView: View {
                             )
                     )
             )
+            .overlay(alignment: .bottom) {
+                // Loading progress bar at the bottom of URL field
+                if let tab = browserState.selectedTab {
+                    LoadingProgressBar(
+                        progress: tab.estimatedProgress,
+                        isLoading: tab.isLoading
+                    )
+                    .padding(.horizontal, 1)
+                    .offset(y: 1)
+                }
+            }
 
             // Privacy shield indicator
             Button(action: {
@@ -193,6 +204,66 @@ struct NavigationButton: View {
 }
 
 // Progress bar for page loading
+struct LoadingProgressBar: View {
+    let progress: Double
+    let isLoading: Bool
+
+    @State private var displayedProgress: Double = 0
+    @State private var isVisible: Bool = false
+
+    var body: some View {
+        GeometryReader { geometry in
+            if isVisible {
+                Rectangle()
+                    .fill(Color.accentColor)
+                    .frame(width: geometry.size.width * displayedProgress)
+            }
+        }
+        .frame(height: 2)
+        .clipShape(RoundedRectangle(cornerRadius: 1))
+        .onChange(of: isLoading) { _, newIsLoading in
+            if newIsLoading {
+                // Starting to load - show the bar and reset progress
+                displayedProgress = 0.05 // Start with a small amount visible
+                withAnimation(.easeOut(duration: 0.1)) {
+                    isVisible = true
+                }
+            } else {
+                // Finished loading - animate to 100% then hide
+                withAnimation(.easeOut(duration: 0.2)) {
+                    displayedProgress = 1.0
+                }
+                // Hide after animation completes
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        isVisible = false
+                    }
+                    // Reset for next load
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        displayedProgress = 0
+                    }
+                }
+            }
+        }
+        .onChange(of: progress) { _, newProgress in
+            // Only update if we're loading and new progress is higher
+            if isLoading && newProgress > displayedProgress {
+                withAnimation(.easeOut(duration: 0.15)) {
+                    displayedProgress = newProgress
+                }
+            }
+        }
+        .onAppear {
+            // Initialize state based on current loading status
+            if isLoading {
+                isVisible = true
+                displayedProgress = max(progress, 0.05)
+            }
+        }
+    }
+}
+
+// Legacy progress view (unused but kept for reference)
 struct LoadingProgressView: View {
     let progress: Double
     let isLoading: Bool

@@ -14,16 +14,8 @@ struct ContentView: View {
                 .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 280)
         } detail: {
             VStack(spacing: 0) {
-                // Address bar
+                // Address bar (includes loading progress bar)
                 AddressBarView()
-
-                // Loading progress
-                if let tab = browserState.selectedTab {
-                    LoadingProgressView(
-                        progress: tab.estimatedProgress,
-                        isLoading: tab.isLoading
-                    )
-                }
 
                 // Web content
                 ZStack {
