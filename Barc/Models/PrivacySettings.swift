@@ -215,35 +215,38 @@ class PrivacySettings: ObservableObject {
 
     // MARK: - Blocked Domains
 
-    /// Built-in tracker domains (used when trackerBlocking is enabled)
+    /// Built-in tracker domains with descriptions (single source of truth)
+    static let builtInTrackerDomains: [TrackerDomain] = [
+        TrackerDomain("doubleclick.net", "Google advertising"),
+        TrackerDomain("googleadservices.com", "Google ads"),
+        TrackerDomain("googlesyndication.com", "Google ad syndication"),
+        TrackerDomain("google-analytics.com", "Google Analytics"),
+        TrackerDomain("facebook.net", "Facebook scripts"),
+        TrackerDomain("connect.facebook.com", "Facebook Connect"),
+        TrackerDomain("facebook.com/tr", "Facebook tracking pixel"),
+        TrackerDomain("amazon-adsystem.com", "Amazon ads"),
+        TrackerDomain("adnxs.com", "AppNexus (Microsoft)"),
+        TrackerDomain("adsrvr.org", "The Trade Desk"),
+        TrackerDomain("criteo.com", "Criteo retargeting"),
+        TrackerDomain("criteo.net", "Criteo retargeting"),
+        TrackerDomain("outbrain.com", "Outbrain content ads"),
+        TrackerDomain("taboola.com", "Taboola content ads"),
+        TrackerDomain("scorecardresearch.com", "comScore analytics"),
+        TrackerDomain("quantserve.com", "Quantcast"),
+        TrackerDomain("rubiconproject.com", "Rubicon Project"),
+        TrackerDomain("pubmatic.com", "PubMatic ads"),
+        TrackerDomain("openx.net", "OpenX ads"),
+        TrackerDomain("casalemedia.com", "Index Exchange"),
+        TrackerDomain("advertising.com", "AOL/Verizon advertising"),
+        TrackerDomain("bluekai.com", "Oracle Data Cloud"),
+        TrackerDomain("exelator.com", "Nielsen eXelate"),
+        TrackerDomain("turn.com", "Amobee"),
+        TrackerDomain("everesttech.net", "Adobe Advertising Cloud")
+    ]
+
+    /// Built-in tracker domain names only (for blocking logic)
     private var builtInBlockedDomains: [String] {
-        [
-            "doubleclick.net",
-            "googleadservices.com",
-            "googlesyndication.com",
-            "google-analytics.com",
-            "facebook.net",
-            "connect.facebook.com",
-            "facebook.com/tr",
-            "amazon-adsystem.com",
-            "adnxs.com",
-            "adsrvr.org",
-            "criteo.com",
-            "criteo.net",
-            "outbrain.com",
-            "taboola.com",
-            "scorecardresearch.com",
-            "quantserve.com",
-            "rubiconproject.com",
-            "pubmatic.com",
-            "openx.net",
-            "casalemedia.com",
-            "advertising.com",
-            "bluekai.com",
-            "exelator.com",
-            "turn.com",
-            "everesttech.net"
-        ]
+        Self.builtInTrackerDomains.map { $0.domain }
     }
 
     /// Combined list of all blocked domains (built-in trackers + custom blocklist)
@@ -285,6 +288,20 @@ class PrivacySettings: ObservableObject {
         searchEngine = .kagi
         homePage = "https://kagi.com"
         newTabBehavior = .homePage
+    }
+}
+
+// MARK: - TrackerDomain
+
+struct TrackerDomain: Identifiable {
+    let domain: String
+    let description: String
+
+    var id: String { domain }
+
+    init(_ domain: String, _ description: String) {
+        self.domain = domain
+        self.description = description
     }
 }
 

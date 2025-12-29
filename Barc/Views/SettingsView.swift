@@ -668,33 +668,9 @@ struct TrackerBlockingRow: View {
     @ObservedObject var settings: PrivacySettings
     @State private var showingDomainList = false
 
-    private let blockedDomains = [
-        ("doubleclick.net", "Google advertising"),
-        ("googleadservices.com", "Google ads"),
-        ("googlesyndication.com", "Google ad syndication"),
-        ("google-analytics.com", "Google Analytics"),
-        ("facebook.net", "Facebook scripts"),
-        ("connect.facebook.com", "Facebook Connect"),
-        ("facebook.com/tr", "Facebook tracking pixel"),
-        ("amazon-adsystem.com", "Amazon ads"),
-        ("adnxs.com", "AppNexus (Microsoft)"),
-        ("adsrvr.org", "The Trade Desk"),
-        ("criteo.com", "Criteo retargeting"),
-        ("criteo.net", "Criteo retargeting"),
-        ("outbrain.com", "Outbrain content ads"),
-        ("taboola.com", "Taboola content ads"),
-        ("scorecardresearch.com", "comScore analytics"),
-        ("quantserve.com", "Quantcast"),
-        ("rubiconproject.com", "Rubicon Project"),
-        ("pubmatic.com", "PubMatic ads"),
-        ("openx.net", "OpenX ads"),
-        ("casalemedia.com", "Index Exchange"),
-        ("advertising.com", "AOL/Verizon advertising"),
-        ("bluekai.com", "Oracle Data Cloud"),
-        ("exelator.com", "Nielsen eXelate"),
-        ("turn.com", "Amobee"),
-        ("everesttech.net", "Adobe Advertising Cloud")
-    ]
+    private var blockedDomains: [TrackerDomain] {
+        PrivacySettings.builtInTrackerDomains
+    }
 
     var body: some View {
         Toggle(isOn: $settings.trackerBlocking) {
@@ -741,27 +717,27 @@ struct TrackerBlockingRow: View {
 
                 ScrollView {
                     VStack(spacing: 0) {
-                        ForEach(blockedDomains, id: \.0) { domain, description in
+                        ForEach(blockedDomains) { tracker in
                             HStack {
                                 Image(systemName: "xmark.shield")
                                     .font(.system(size: 10))
                                     .foregroundColor(.red.opacity(0.7))
                                     .frame(width: 16)
 
-                                Text(domain)
+                                Text(tracker.domain)
                                     .font(.system(size: 11, design: .monospaced))
                                     .foregroundColor(.primary)
 
                                 Spacer()
 
-                                Text(description)
+                                Text(tracker.description)
                                     .font(.system(size: 10))
                                     .foregroundColor(.secondary)
                             }
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
 
-                            if domain != blockedDomains.last?.0 {
+                            if tracker.domain != blockedDomains.last?.domain {
                                 Divider()
                                     .padding(.leading, 28)
                             }
