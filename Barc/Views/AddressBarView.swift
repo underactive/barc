@@ -314,8 +314,8 @@ struct NetworkIndicatorsMenu: View {
     var body: some View {
         Button(action: { showingPopover.toggle() }) {
             HStack(spacing: 6) {
-                NetworkIndicator(label: "Rx", isActive: showRxIndicator, activeColor: .green)
                 NetworkIndicator(label: "Tx", isActive: showTxIndicator, activeColor: .red)
+                NetworkIndicator(label: "Rx", isActive: showRxIndicator, activeColor: .green)
             }
             .padding(.horizontal, 4)
             .padding(.vertical, 2)
