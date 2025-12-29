@@ -49,13 +49,17 @@ This file documents all development work done on Barc with Claude Code, so futur
 - Animates sidebar show/hide
 
 ### Network Activity Indicators
-- **Rx indicator** (green) - Lights up when receiving data
-- **Tx indicator** (red) - Lights up when transmitting data
-- Located in **address bar** (right of privacy shield icon)
-- **Clickable popover menu** allows quick toggle of:
-  - Network Sounds (master toggle)
-  - Rx Sound (individual toggle)
-  - Tx Sound (individual toggle)
+- **URL Bar Indicators**:
+  - **Rx indicator** (green) - Lights up when receiving data
+  - **Tx indicator** (red) - Lights up when transmitting data
+  - Located in **address bar** (right of privacy shield icon)
+  - **Clickable popover menu** allows quick toggle of sound settings
+  - Can be toggled on/off and scoped to All Tabs or Active Tab Only
+- **Background Tab Indicators**:
+  - **Red dot** (Tx) on top, **green dot** (Rx) below - stacked vertically
+  - Appear on right side of non-active tabs when network activity occurs
+  - Instant appear, 0.75s fade-out animation
+  - Close button takes precedence when hovering
 - Comprehensive JavaScript injection intercepts ALL network activity:
   - `fetch()` API calls
   - `XMLHttpRequest` operations
@@ -77,7 +81,7 @@ This file documents all development work done on Barc with Claude Code, so futur
 - Updates in real-time when privacy settings change
 
 ### Settings Window
-- **General tab**: Homepage URL, default search engine, Sounds (network activity sounds with volume)
+- **General tab**: Homepage URL, default search engine, Network Activity (Indicator Lights + Sounds subsections)
 - **Barc Privacy tab**: All privacy feature toggles + storage whitelist management
 - `SettingsState.shared` manages selected tab for programmatic navigation
 
@@ -190,6 +194,10 @@ open ~/Library/Developer/Xcode/DerivedData/Barc-*/Build/Products/Debug/Barc.app
 16. **Loading progress bar**: Animated progress indicator in URL field
 17. **Sound settings expansion**: Added individual Rx/Tx toggles and volume slider
 18. **Address bar autofocus**: URL bar automatically gains focus when opening a new tab (⌘T) for immediate typing
+19. **Background tab activity indicators**: Red/green dots on non-active tabs showing Tx/Rx activity
+20. **Network Activity settings refactor**: Reorganized into Indicator Lights and Sounds subsections with independent scope controls
+21. **Scope settings**: Separate "All Tabs vs Active Tab Only" controls for URL bar indicators and sounds
+22. **Default changes**: Sounds enabled by default, scopes default to Active Tab Only
 
 ---
 
@@ -206,7 +214,7 @@ open ~/Library/Developer/Xcode/DerivedData/Barc-*/Build/Products/Debug/Barc.app
 
 ---
 
-*Last updated: December 29, 2024*
+*Last updated: December 29, 2024 (Session 2)*
 
 ---
 
@@ -281,3 +289,54 @@ When creating a new tab (⌘T), the address bar now automatically gains focus fo
 - `AddressBarView` watches for changes via `.onChange(of: browserState.shouldFocusAddressBar)`
 - When triggered, sets `isFocused = true` and resets the flag
 - Standard browser UX pattern - new tab → ready to type
+
+### Background Tab Network Activity Indicators
+Non-active tabs now show visual indicators when they have network activity:
+- **Red dot** (Tx) and **green dot** (Rx) appear vertically stacked on the right side of background tabs
+- Dots appear instantly and fade out over 0.75s (easeOut animation)
+- When hovering over a tab, the close button takes precedence over indicators
+- Controlled by "Show background tab activity" toggle in Settings
+- Tracks per-tab activity via `transmittingTabIds` and `receivingTabIds` Sets in `NetworkActivityMonitor`
+
+### Network Activity Settings Refactor
+Completely reorganized Settings > General > Network Activity into two subsections:
+
+**Indicator Lights:**
+- Show URL bar network activity (default: ON) - toggles Rx/Tx indicators in address bar
+- URL Bar Network Activity For: [All Tabs | Active Tab Only] (default: Active Tab Only)
+- Show background tab activity (default: ON) - toggles dots on background tabs
+
+**Sounds:**
+- Play network activity sound effects (default: ON) - with description text
+- Volume slider (default: 50%)
+- Rx (Receive) Sound toggle (default: ON)
+- Tx (Transmit) Sound toggle (default: ON)
+- Play Sounds For: [All Tabs | Active Tab Only] (default: Active Tab Only)
+
+Items under each subsection are indented for visual hierarchy.
+
+### Independent Scope Controls for Indicators vs Sounds
+- URL bar indicators and sounds now have **separate** scope settings
+- `indicatorScope` in `NetworkActivityMonitor` controls URL bar indicators
+- `soundScope` in `NetworkSoundManager` controls sound playback
+- Fixed bug where "Play Sounds For: All Tabs" didn't work - sounds now always trigger regardless of indicator scope, with filtering done at the sound level
+
+### New Settings Properties
+- `NetworkActivityMonitor.showURLBarNetworkActivity` - toggle URL bar Rx/Tx display
+- `NetworkActivityMonitor.indicatorScope` - All Tabs vs Active Tab Only for URL bar
+- `NetworkActivityMonitor.showBackgroundTabIndicators` - toggle background tab dots
+- `NetworkSoundManager.soundScope` - All Tabs vs Active Tab Only for sounds
+
+### Default Changes
+- Network activity sounds now **enabled by default** (was disabled)
+- Both indicator and sound scopes default to **Active Tab Only** (was All Tabs)
+
+### NetworkSoundScope Enum
+Added `NetworkSoundScope` enum in `PrivacySettings.swift`:
+```swift
+enum NetworkSoundScope: String, CaseIterable, Identifiable {
+    case allTabs = "allTabs"
+    case activeTabOnly = "activeTabOnly"
+}
+```
+Used by both indicator scope and sound scope settings.
