@@ -1,4 +1,61 @@
 import SwiftUI
+import AppKit
+
+// MARK: - Left-Aligned TextField (fixes macOS Form right-alignment issue)
+
+struct LeftAlignedTextField: NSViewRepresentable {
+    @Binding var text: String
+    var placeholder: String
+    var font: NSFont = .systemFont(ofSize: 12)
+    var isEnabled: Bool = true
+    var onSubmit: (() -> Void)? = nil
+
+    func makeNSView(context: Context) -> NSTextField {
+        let textField = NSTextField()
+        textField.placeholderString = placeholder
+        textField.font = font
+        textField.alignment = .left
+        textField.bezelStyle = .roundedBezel
+        textField.delegate = context.coordinator
+        textField.lineBreakMode = .byTruncatingTail
+        textField.cell?.truncatesLastVisibleLine = true
+        return textField
+    }
+
+    func updateNSView(_ nsView: NSTextField, context: Context) {
+        if nsView.stringValue != text {
+            nsView.stringValue = text
+        }
+        nsView.isEnabled = isEnabled
+        nsView.alignment = .left
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, NSTextFieldDelegate {
+        var parent: LeftAlignedTextField
+
+        init(_ parent: LeftAlignedTextField) {
+            self.parent = parent
+        }
+
+        func controlTextDidChange(_ obj: Notification) {
+            if let textField = obj.object as? NSTextField {
+                parent.text = textField.stringValue
+            }
+        }
+
+        func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+                parent.onSubmit?()
+                return true
+            }
+            return false
+        }
+    }
+}
 
 enum SettingsTab: Int {
     case general = 0
@@ -56,13 +113,15 @@ struct GeneralSettingsView: View {
 
                 HStack {
                     Text("Home Page:")
-                    TextField("https://kagi.com", text: $homePageText)
-                        .textFieldStyle(.roundedBorder)
-                        .onAppear { homePageText = settings.homePage }
-                        .onSubmit { settings.homePage = homePageText }
-                        .onChange(of: homePageText) { _, newValue in
-                            settings.homePage = newValue
-                        }
+                    LeftAlignedTextField(
+                        text: $homePageText,
+                        placeholder: "https://kagi.com",
+                        onSubmit: { settings.homePage = homePageText }
+                    )
+                    .onAppear { homePageText = settings.homePage }
+                    .onChange(of: homePageText) { _, newValue in
+                        settings.homePage = newValue
+                    }
                 }
 
                 Picker("New Tabs Open With:", selection: $settings.newTabBehavior) {
@@ -232,6 +291,7 @@ struct GeneralSettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .environment(\.layoutDirection, .leftToRight)
         .padding()
     }
 
@@ -447,6 +507,7 @@ struct PrivacySettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .environment(\.layoutDirection, .leftToRight)
         .padding()
     }
 
@@ -508,12 +569,11 @@ struct StorageWhitelistView: View {
 
             // Add domain input
             HStack(spacing: 8) {
-                TextField("Enter domain (e.g., kagi.com)", text: $newDomain)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 12))
-                    .onSubmit {
-                        addDomain()
-                    }
+                LeftAlignedTextField(
+                    text: $newDomain,
+                    placeholder: "Enter domain (e.g., kagi.com)",
+                    onSubmit: { addDomain() }
+                )
 
                 Button(action: addDomain) {
                     Image(systemName: "plus.circle.fill")
@@ -743,19 +803,18 @@ struct CustomBlocklistView: View {
 
             // Add domain input
             HStack(spacing: 8) {
-                TextField("e.g., ads.example.com", text: $newDomain)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 12))
-                    .onSubmit {
-                        addDomain()
-                    }
-                    .disabled(!settings.customBlocklistEnabled)
+                LeftAlignedTextField(
+                    text: $newDomain,
+                    placeholder: "e.g., ads.example.com",
+                    isEnabled: settings.customBlocklistEnabled,
+                    onSubmit: { addDomain() }
+                )
 
                 Button(action: addDomain) {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 16))
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.plain)
                 .foregroundColor(.accentColor)
                 .disabled(newDomain.trimmingCharacters(in: .whitespaces).isEmpty || !settings.customBlocklistEnabled)
             }
