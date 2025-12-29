@@ -56,6 +56,10 @@ class NetworkSoundManager: ObservableObject {
     }
 
     private init() {
+        // Default to enabled
+        if UserDefaults.standard.object(forKey: "sound.networkActivity") == nil {
+            UserDefaults.standard.set(true, forKey: "sound.networkActivity")
+        }
         self.isEnabled = UserDefaults.standard.bool(forKey: "sound.networkActivity")
 
         // Default to true if not set
@@ -69,14 +73,14 @@ class NetworkSoundManager: ObservableObject {
         if UserDefaults.standard.object(forKey: "sound.volume") == nil {
             UserDefaults.standard.set(Float(0.5), forKey: "sound.volume")
         }
-        // Default scope to all tabs
+        // Default scope to active tab only
         if UserDefaults.standard.object(forKey: "sound.scope") == nil {
-            UserDefaults.standard.set(NetworkSoundScope.allTabs.rawValue, forKey: "sound.scope")
+            UserDefaults.standard.set(NetworkSoundScope.activeTabOnly.rawValue, forKey: "sound.scope")
         }
         self.rxEnabled = UserDefaults.standard.bool(forKey: "sound.rxEnabled")
         self.txEnabled = UserDefaults.standard.bool(forKey: "sound.txEnabled")
         self.volume = UserDefaults.standard.float(forKey: "sound.volume")
-        self.soundScope = NetworkSoundScope(rawValue: UserDefaults.standard.string(forKey: "sound.scope") ?? "allTabs") ?? .allTabs
+        self.soundScope = NetworkSoundScope(rawValue: UserDefaults.standard.string(forKey: "sound.scope") ?? "activeTabOnly") ?? .activeTabOnly
 
         if isEnabled {
             setupAudioEngine()

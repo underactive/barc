@@ -108,90 +108,124 @@ struct GeneralSettingsView: View {
                 .padding(.vertical, 8)
 
             Section {
-                Toggle(isOn: $soundManager.isEnabled) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Network Activity Sounds")
-                            .font(.system(size: 13, weight: .medium))
-                        Text("Play retro modem sounds when transmitting or receiving data.")
-                            .font(.system(size: 11))
+                // MARK: Indicator Lights
+                Text("Indicator Lights")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.secondary)
+                    .textCase(.uppercase)
+
+                Group {
+                    Toggle(isOn: $networkMonitor.showURLBarNetworkActivity) {
+                        Text("Show URL bar network activity")
+                            .font(.system(size: 13))
+                    }
+                    .toggleStyle(.switch)
+
+                    HStack {
+                        Text("URL Bar Network Activity For:")
+                            .font(.system(size: 13))
+                        Spacer()
+                        Picker("", selection: $networkMonitor.indicatorScope) {
+                            ForEach(NetworkSoundScope.allCases) { scope in
+                                Text(scope.displayName).tag(scope)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 150)
+                    }
+                    .disabled(!networkMonitor.showURLBarNetworkActivity)
+                    .opacity(networkMonitor.showURLBarNetworkActivity ? 1.0 : 0.5)
+
+                    Toggle(isOn: $networkMonitor.showBackgroundTabIndicators) {
+                        Text("Show background tab activity")
+                            .font(.system(size: 13))
+                    }
+                    .toggleStyle(.switch)
+                }
+                .padding(.leading, 12)
+
+                // MARK: Sounds
+                Text("Sounds")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.secondary)
+                    .textCase(.uppercase)
+                    .padding(.top, 8)
+
+                Group {
+                    Toggle(isOn: $soundManager.isEnabled) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Play network activity sound effects")
+                                .font(.system(size: 13))
+                            Text("Play retro modem sounds when transmitting or receiving data.")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .toggleStyle(.switch)
+
+                    HStack(spacing: 12) {
+                        Image(systemName: "speaker.fill")
+                            .font(.system(size: 12))
                             .foregroundColor(.secondary)
-                    }
-                }
-                .toggleStyle(.switch)
 
-                Toggle(isOn: $soundManager.rxEnabled) {
-                    HStack(spacing: 8) {
-                        Circle()
-                            .fill(soundManager.isEnabled && soundManager.rxEnabled ? .green : .gray.opacity(0.3))
-                            .frame(width: 8, height: 8)
-                        Text("Rx (Receive) Sound")
-                            .font(.system(size: 13))
-                    }
-                }
-                .toggleStyle(.switch)
-                .disabled(!soundManager.isEnabled)
-                .opacity(soundManager.isEnabled ? 1.0 : 0.5)
+                        Slider(value: $soundManager.volume, in: 0...1)
+                            .frame(maxWidth: 200)
 
-                Toggle(isOn: $soundManager.txEnabled) {
-                    HStack(spacing: 8) {
-                        Circle()
-                            .fill(soundManager.isEnabled && soundManager.txEnabled ? .red : .gray.opacity(0.3))
-                            .frame(width: 8, height: 8)
-                        Text("Tx (Transmit) Sound")
-                            .font(.system(size: 13))
-                    }
-                }
-                .toggleStyle(.switch)
-                .disabled(!soundManager.isEnabled)
-                .opacity(soundManager.isEnabled ? 1.0 : 0.5)
+                        Image(systemName: "speaker.wave.3.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
 
-                HStack {
-                    Text("Network Activity For:")
-                        .font(.system(size: 13))
-                    Spacer()
-                    Picker("", selection: $networkMonitor.indicatorScope) {
-                        ForEach(NetworkSoundScope.allCases) { scope in
-                            Text(scope.displayName).tag(scope)
+                        Text("\(Int(soundManager.volume * 100))%")
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundColor(.secondary)
+                            .frame(width: 40, alignment: .trailing)
+                    }
+                    .disabled(!soundManager.isEnabled)
+                    .opacity(soundManager.isEnabled ? 1.0 : 0.5)
+
+                    Toggle(isOn: $soundManager.rxEnabled) {
+                        HStack(spacing: 8) {
+                            Circle()
+                                .fill(soundManager.isEnabled && soundManager.rxEnabled ? .green : .gray.opacity(0.3))
+                                .frame(width: 8, height: 8)
+                            Text("Rx (Receive) Sound")
+                                .font(.system(size: 13))
                         }
                     }
-                    .pickerStyle(.menu)
-                    .frame(width: 150)
-                }
+                    .toggleStyle(.switch)
+                    .disabled(!soundManager.isEnabled)
+                    .opacity(soundManager.isEnabled ? 1.0 : 0.5)
 
-                HStack {
-                    Text("Play Sounds For:")
-                        .font(.system(size: 13))
-                    Spacer()
-                    Picker("", selection: $soundManager.soundScope) {
-                        ForEach(NetworkSoundScope.allCases) { scope in
-                            Text(scope.displayName).tag(scope)
+                    Toggle(isOn: $soundManager.txEnabled) {
+                        HStack(spacing: 8) {
+                            Circle()
+                                .fill(soundManager.isEnabled && soundManager.txEnabled ? .red : .gray.opacity(0.3))
+                                .frame(width: 8, height: 8)
+                            Text("Tx (Transmit) Sound")
+                                .font(.system(size: 13))
                         }
                     }
-                    .pickerStyle(.menu)
-                    .frame(width: 150)
+                    .toggleStyle(.switch)
+                    .disabled(!soundManager.isEnabled)
+                    .opacity(soundManager.isEnabled ? 1.0 : 0.5)
+
+                    HStack {
+                        Text("Play Sounds For:")
+                            .font(.system(size: 13))
+                        Spacer()
+                        Picker("", selection: $soundManager.soundScope) {
+                            ForEach(NetworkSoundScope.allCases) { scope in
+                                Text(scope.displayName).tag(scope)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 150)
+                    }
+                    .disabled(!soundManager.isEnabled)
+                    .opacity(soundManager.isEnabled ? 1.0 : 0.5)
                 }
-                .disabled(!soundManager.isEnabled)
-                .opacity(soundManager.isEnabled ? 1.0 : 0.5)
+                .padding(.leading, 12)
 
-                HStack(spacing: 12) {
-                    Image(systemName: "speaker.fill")
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
-
-                    Slider(value: $soundManager.volume, in: 0...1)
-                        .frame(maxWidth: 200)
-
-                    Image(systemName: "speaker.wave.3.fill")
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
-
-                    Text("\(Int(soundManager.volume * 100))%")
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(.secondary)
-                        .frame(width: 40, alignment: .trailing)
-                }
-                .disabled(!soundManager.isEnabled)
-                .opacity(soundManager.isEnabled ? 1.0 : 0.5)
             } header: {
                 Label("Network Activity", systemImage: "network")
                     .font(.headline)

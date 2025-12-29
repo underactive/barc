@@ -169,10 +169,12 @@ struct AddressBarView: View {
             .help(privacyScoreDescription)
 
             // Network activity indicators with popover menu
-            NetworkIndicatorsMenu(
-                networkMonitor: networkMonitor,
-                soundManager: soundManager
-            )
+            if networkMonitor.showURLBarNetworkActivity {
+                NetworkIndicatorsMenu(
+                    networkMonitor: networkMonitor,
+                    soundManager: soundManager
+                )
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)

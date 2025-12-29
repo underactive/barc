@@ -74,7 +74,16 @@ struct TabRowView: View {
     let isSelected: Bool
 
     @EnvironmentObject var browserState: BrowserState
+    @ObservedObject private var networkMonitor = NetworkActivityMonitor.shared
     @State private var isHovered: Bool = false
+
+    private var isBackgroundTabTransmitting: Bool {
+        !isSelected && networkMonitor.transmittingTabIds.contains(tab.id)
+    }
+
+    private var isBackgroundTabReceiving: Bool {
+        !isSelected && networkMonitor.receivingTabIds.contains(tab.id)
+    }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -107,15 +116,34 @@ struct TabRowView: View {
 
             Spacer()
 
-            // Close button (visible on hover or selection)
-            if isHovered || isSelected {
-                Button(action: { browserState.closeTab(tab) }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundColor(.secondary)
+            // Close button OR network indicators
+            ZStack {
+                // Network activity indicators (vertical stack: Tx on top, Rx below)
+                // Always rendered but hidden when hovering or selected
+                if networkMonitor.showBackgroundTabIndicators {
+                    VStack(spacing: 3) {
+                        TabNetworkDot(
+                            isActive: isBackgroundTabTransmitting && !isHovered && !isSelected,
+                            activeColor: .red
+                        )
+                        TabNetworkDot(
+                            isActive: isBackgroundTabReceiving && !isHovered && !isSelected,
+                            activeColor: .green
+                        )
+                    }
+                    .opacity(isHovered || isSelected ? 0 : 1)
                 }
-                .buttonStyle(.plain)
-                .opacity(isHovered ? 1 : 0.5)
+
+                // Close button (visible on hover or selection)
+                if isHovered || isSelected {
+                    Button(action: { browserState.closeTab(tab) }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .opacity(isHovered ? 1 : 0.5)
+                }
             }
         }
         .padding(.horizontal, 10)
@@ -139,6 +167,20 @@ struct TabRowView: View {
             return Color(NSColor.controlBackgroundColor)
         }
         return .clear
+    }
+}
+
+struct TabNetworkDot: View {
+    let isActive: Bool
+    let activeColor: Color
+
+    var body: some View {
+        Circle()
+            .fill(isActive ? activeColor : Color.gray.opacity(0.3))
+            .frame(width: 6, height: 6)
+            .shadow(color: isActive ? activeColor.opacity(0.6) : .clear, radius: 2)
+            .opacity(isActive ? 1 : 0)
+            .animation(isActive ? .none : .easeOut(duration: 0.75), value: isActive)
     }
 }
 
