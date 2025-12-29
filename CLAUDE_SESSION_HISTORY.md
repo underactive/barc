@@ -51,7 +51,11 @@ This file documents all development work done on Barc with Claude Code, so futur
 ### Network Activity Indicators
 - **Rx indicator** (green) - Lights up when receiving data
 - **Tx indicator** (red) - Lights up when transmitting data
-- Located in sidebar footer (bottom right)
+- Located in **address bar** (right of privacy shield icon)
+- **Clickable popover menu** allows quick toggle of:
+  - Network Sounds (master toggle)
+  - Rx Sound (individual toggle)
+  - Tx Sound (individual toggle)
 - Comprehensive JavaScript injection intercepts ALL network activity:
   - `fetch()` API calls
   - `XMLHttpRequest` operations
@@ -73,7 +77,7 @@ This file documents all development work done on Barc with Claude Code, so futur
 - Updates in real-time when privacy settings change
 
 ### Settings Window
-- **General tab**: Homepage URL, default search engine
+- **General tab**: Homepage URL, default search engine, Sounds (network activity sounds with volume)
 - **Barc Privacy tab**: All privacy feature toggles + storage whitelist management
 - `SettingsState.shared` manages selected tab for programmatic navigation
 
@@ -93,7 +97,8 @@ Barc/
 │   ├── Tab.swift              # Tab model (id, url, title, favicon, loading state)
 │   ├── BrowserState.swift     # Tab management, navigation state
 │   ├── PrivacySettings.swift  # Privacy settings with @AppStorage, whitelist logic
-│   └── NetworkActivityMonitor.swift  # Singleton for Rx/Tx state
+│   ├── NetworkActivityMonitor.swift  # Singleton for Rx/Tx state
+│   └── NetworkSoundManager.swift     # Modem sounds for network activity (AVAudioEngine)
 ├── Views/
 │   ├── ContentView.swift      # Main layout (sidebar + webview)
 │   ├── SidebarView.swift      # Arc-style tabs, network indicators
@@ -131,14 +136,17 @@ BarcApp
 ├── BrowserState (manages tabs)
 │   └── Tab[] (each has WebView reference)
 ├── PrivacySettings.shared (singleton, persisted with @AppStorage)
-├── NetworkActivityMonitor.shared (singleton for Rx/Tx)
+├── NetworkActivityMonitor.shared (singleton for Rx/Tx state)
+├── NetworkSoundManager.shared (singleton for modem sounds, observes NetworkActivityMonitor)
 └── SettingsState.shared (singleton for settings tab navigation)
 
 ContentView
-├── SidebarView (shows tabs, network indicators)
-│   └── Uses NetworkActivityMonitor.shared
+├── SidebarView (shows tabs)
 └── AddressBarView
     ├── Privacy score indicator (reads PrivacySettings, opens Settings on click)
+    ├── Network indicators (Rx/Tx) with popover menu
+    ├── Loading progress bar (animated)
+    ├── Uses NetworkActivityMonitor.shared, NetworkSoundManager.shared
     └── Uses SettingsState.shared + @Environment(\.openSettings)
 
 WebView (per tab)
@@ -177,6 +185,10 @@ open ~/Library/Developer/Xcode/DerivedData/Barc-*/Build/Products/Debug/Barc.app
 11. **Referrer Policy Control**: Added 6 referrer policy options to control what information is shared when navigating between pages
 12. **Third-Party Cookie Blocking**: Uses WKContentRuleList to block cookies from third-party domains
 13. **Network Activity Sounds**: Retro modem-style sounds when transmitting/receiving data (toggleable in Settings > General)
+14. **Privacy score refactoring**: Changed to percentage-based thresholds for easier extensibility
+15. **Rx/Tx indicators moved**: From sidebar footer to address bar with clickable popover menu
+16. **Loading progress bar**: Animated progress indicator in URL field
+17. **Sound settings expansion**: Added individual Rx/Tx toggles and volume slider
 
 ---
 
@@ -189,10 +201,11 @@ open ~/Library/Developer/Xcode/DerivedData/Barc-*/Build/Products/Debug/Barc.app
 - Reader mode
 - Extension support
 - Sync across devices
+- **Toolbar-based address bar**: Use AppKit's NSToolbar for Safari-like unified toolbar (SwiftUI toolbar too compact)
 
 ---
 
-*Last updated: December 2024*
+*Last updated: December 29, 2024*
 
 ---
 
@@ -233,5 +246,29 @@ Retro dialup modem-style sounds that play when network activity occurs:
 - **Tx sound**: Higher pitch (2400 Hz carrier) - plays on data transmission
 - **Rx sound**: Lower pitch (1200 Hz carrier) - plays on data reception
 - Sounds are generated programmatically using AVAudioEngine with carrier waves, harmonics, and noise
-- Toggle in Settings > General > Sounds
+- **Settings** (Settings > General > Sounds):
+  - Master toggle for Network Activity Sounds
+  - Individual toggles for Rx and Tx sounds
+  - Volume slider (0-100%)
+- **Quick access**: Click Rx/Tx indicators in address bar for popover menu
 - Disabled by default
+
+### Loading Progress Bar
+- Animated progress bar at bottom of URL field
+- Shows page load progress (like other browsers)
+- Animates to 100% when loading completes, then fades out
+- Custom `LoadingProgressBar` component with proper animation lifecycle
+
+### Privacy Score Refactoring
+- Privacy score now uses percentage-based thresholds instead of hardcoded values
+- Makes it easier to add new privacy features without updating threshold logic
+- `maxPrivacyScore` constant defines the denominator
+- `privacyScorePercent` computed property used for color/icon selection
+
+### Attempted: Toolbar-Based Address Bar
+Attempted to move address bar into macOS toolbar to eliminate whitespace above it:
+- `.toolbar` with `.principal` placement - toolbar too compact
+- `.toolbarRole(.browser)` - not available on macOS
+- `.toolbarTitleDisplayMode(.inline)` - still too small
+- NSWindow configuration with `titlebarAppearsTransparent` - didn't help
+- **Conclusion**: macOS toolbar has fixed compact height unsuitable for browser address bars. Safari uses AppKit's NSToolbar with custom configuration. Reverted changes.
