@@ -44,6 +44,12 @@ class NetworkSoundManager: ObservableObject {
         }
     }
 
+    @Published var soundScope: NetworkSoundScope {
+        didSet {
+            UserDefaults.standard.set(soundScope.rawValue, forKey: "sound.scope")
+        }
+    }
+
     private func updateVolume() {
         txPlayerNode?.volume = volume
         rxPlayerNode?.volume = volume
@@ -63,9 +69,14 @@ class NetworkSoundManager: ObservableObject {
         if UserDefaults.standard.object(forKey: "sound.volume") == nil {
             UserDefaults.standard.set(Float(0.5), forKey: "sound.volume")
         }
+        // Default scope to all tabs
+        if UserDefaults.standard.object(forKey: "sound.scope") == nil {
+            UserDefaults.standard.set(NetworkSoundScope.allTabs.rawValue, forKey: "sound.scope")
+        }
         self.rxEnabled = UserDefaults.standard.bool(forKey: "sound.rxEnabled")
         self.txEnabled = UserDefaults.standard.bool(forKey: "sound.txEnabled")
         self.volume = UserDefaults.standard.float(forKey: "sound.volume")
+        self.soundScope = NetworkSoundScope(rawValue: UserDefaults.standard.string(forKey: "sound.scope") ?? "allTabs") ?? .allTabs
 
         if isEnabled {
             setupAudioEngine()
@@ -84,7 +95,10 @@ class NetworkSoundManager: ObservableObject {
             .sink { [weak self] isTransmitting in
                 guard let self = self, self.isEnabled, self.txEnabled else { return }
                 if isTransmitting && !self.lastTxState {
-                    self.playTxSound()
+                    // Check if we should play based on sound scope
+                    if self.soundScope == .allTabs || monitor.lastTransmitWasActiveTab {
+                        self.playTxSound()
+                    }
                 }
                 self.lastTxState = isTransmitting
             }
@@ -96,7 +110,10 @@ class NetworkSoundManager: ObservableObject {
             .sink { [weak self] isReceiving in
                 guard let self = self, self.isEnabled, self.rxEnabled else { return }
                 if isReceiving && !self.lastRxState {
-                    self.playRxSound()
+                    // Check if we should play based on sound scope
+                    if self.soundScope == .allTabs || monitor.lastReceiveWasActiveTab {
+                        self.playRxSound()
+                    }
                 }
                 self.lastRxState = isReceiving
             }

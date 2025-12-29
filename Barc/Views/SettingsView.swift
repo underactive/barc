@@ -41,6 +41,7 @@ struct SettingsView: View {
 struct GeneralSettingsView: View {
     @ObservedObject private var settings = PrivacySettings.shared
     @ObservedObject private var soundManager = NetworkSoundManager.shared
+    @ObservedObject private var networkMonitor = NetworkActivityMonitor.shared
     @State private var homePageText: String = ""
 
     var body: some View {
@@ -144,6 +145,34 @@ struct GeneralSettingsView: View {
                 .disabled(!soundManager.isEnabled)
                 .opacity(soundManager.isEnabled ? 1.0 : 0.5)
 
+                HStack {
+                    Text("Network Activity For:")
+                        .font(.system(size: 13))
+                    Spacer()
+                    Picker("", selection: $networkMonitor.indicatorScope) {
+                        ForEach(NetworkSoundScope.allCases) { scope in
+                            Text(scope.displayName).tag(scope)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 150)
+                }
+
+                HStack {
+                    Text("Play Sounds For:")
+                        .font(.system(size: 13))
+                    Spacer()
+                    Picker("", selection: $soundManager.soundScope) {
+                        ForEach(NetworkSoundScope.allCases) { scope in
+                            Text(scope.displayName).tag(scope)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 150)
+                }
+                .disabled(!soundManager.isEnabled)
+                .opacity(soundManager.isEnabled ? 1.0 : 0.5)
+
                 HStack(spacing: 12) {
                     Image(systemName: "speaker.fill")
                         .font(.system(size: 12))
@@ -164,7 +193,7 @@ struct GeneralSettingsView: View {
                 .disabled(!soundManager.isEnabled)
                 .opacity(soundManager.isEnabled ? 1.0 : 0.5)
             } header: {
-                Label("Sounds", systemImage: "speaker.wave.2")
+                Label("Network Activity", systemImage: "network")
                     .font(.headline)
             }
         }

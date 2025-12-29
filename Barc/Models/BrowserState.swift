@@ -4,7 +4,12 @@ import WebKit
 
 class BrowserState: ObservableObject {
     @Published var tabs: [Tab] = []
-    @Published var selectedTabId: UUID?
+    @Published var selectedTabId: UUID? {
+        didSet {
+            // Keep NetworkActivityMonitor in sync with the active tab
+            NetworkActivityMonitor.shared.activeTabId = selectedTabId
+        }
+    }
     @Published var sidebarCollapsed: Bool = false
     @Published var focusAddressBarTrigger: UUID = UUID()
 

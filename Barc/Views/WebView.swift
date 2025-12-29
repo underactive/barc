@@ -425,9 +425,9 @@ struct WebView: NSViewRepresentable {
 
             switch type {
             case "tx":
-                networkMonitor.reportTransmit()
+                networkMonitor.reportTransmit(tabId: tab.id)
             case "rx":
-                networkMonitor.reportReceive()
+                networkMonitor.reportReceive(tabId: tab.id)
             default:
                 break
             }
@@ -471,7 +471,7 @@ struct WebView: NSViewRepresentable {
         // MARK: - WKNavigationDelegate
 
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-            networkMonitor.reportTransmit()
+            networkMonitor.reportTransmit(tabId: tab.id)
 
             guard let url = navigationAction.request.url else {
                 decisionHandler(.allow)
@@ -538,27 +538,27 @@ struct WebView: NSViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
-            networkMonitor.reportReceive()
+            networkMonitor.reportReceive(tabId: tab.id)
             decisionHandler(.allow)
         }
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             tab.isLoading = true
-            networkMonitor.reportTransmit()
+            networkMonitor.reportTransmit(tabId: tab.id)
         }
 
         func webView(_ webView: WKWebView, didReceiveServerRedirectForProvisionalNavigation navigation: WKNavigation!) {
-            networkMonitor.reportActivity(tx: true, rx: true)
+            networkMonitor.reportActivity(tabId: tab.id, tx: true, rx: true)
         }
 
         func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
-            networkMonitor.reportReceive()
+            networkMonitor.reportReceive(tabId: tab.id)
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             tab.isLoading = false
             tab.updateFromWebView(webView)
-            networkMonitor.reportReceive()
+            networkMonitor.reportReceive(tabId: tab.id)
             fetchFavicon(for: webView)
         }
 
@@ -593,19 +593,19 @@ struct WebView: NSViewRepresentable {
             let faviconURL = URL(string: "https://\(host)/favicon.ico")
             guard let faviconURL else { return }
 
-            networkMonitor.reportTransmit()
+            networkMonitor.reportTransmit(tabId: tab.id)
 
             Task {
                 do {
                     let (data, _) = try await URLSession.shared.data(from: faviconURL)
-                    networkMonitor.reportReceive()
+                    networkMonitor.reportReceive(tabId: tab.id)
                     if let image = NSImage(data: data) {
                         await MainActor.run {
                             self.tab.favicon = image
                         }
                     }
                 } catch {
-                    networkMonitor.reportReceive()
+                    networkMonitor.reportReceive(tabId: tab.id)
                 }
             }
         }
