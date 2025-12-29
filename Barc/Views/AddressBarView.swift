@@ -4,6 +4,7 @@ struct AddressBarView: View {
     @EnvironmentObject var browserState: BrowserState
     @ObservedObject private var privacySettings = PrivacySettings.shared
     @StateObject private var networkMonitor = NetworkActivityMonitor.shared
+    @ObservedObject private var soundManager = NetworkSoundManager.shared
     @Environment(\.openSettings) private var openSettings
     @State private var inputText: String = ""
     @State private var isEditing: Bool = false
@@ -171,6 +172,23 @@ struct AddressBarView: View {
             HStack(spacing: 6) {
                 NetworkIndicator(label: "Rx", isActive: networkMonitor.isReceiving, activeColor: .green)
                 NetworkIndicator(label: "Tx", isActive: networkMonitor.isTransmitting, activeColor: .red)
+            }
+            .contextMenu {
+                Toggle(isOn: $soundManager.isEnabled) {
+                    Label("Network Sounds", systemImage: soundManager.isEnabled ? "speaker.wave.2" : "speaker.slash")
+                }
+
+                Divider()
+
+                Toggle(isOn: $soundManager.rxEnabled) {
+                    Label("Rx (Receive) Sound", systemImage: "arrow.down.circle")
+                }
+                .disabled(!soundManager.isEnabled)
+
+                Toggle(isOn: $soundManager.txEnabled) {
+                    Label("Tx (Transmit) Sound", systemImage: "arrow.up.circle")
+                }
+                .disabled(!soundManager.isEnabled)
             }
         }
         .padding(.horizontal, 16)
