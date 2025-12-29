@@ -63,6 +63,34 @@ struct WebView: NSViewRepresentable {
         // Privacy: Fraudulent website warning
         configuration.preferences.isFraudulentWebsiteWarningEnabled = settings.fraudulentWebsiteWarning
 
+        // Privacy: Third-party cookie blocking using content rules
+        if settings.thirdPartyCookieBlocking {
+            let blockCookiesRule = """
+            [{
+                "trigger": {
+                    "url-filter": ".*",
+                    "load-type": ["third-party"]
+                },
+                "action": {
+                    "type": "block-cookies"
+                }
+            }]
+            """
+
+            WKContentRuleListStore.default().compileContentRuleList(
+                forIdentifier: "blockThirdPartyCookies",
+                encodedContentRuleList: blockCookiesRule
+            ) { ruleList, error in
+                if let ruleList = ruleList {
+                    DispatchQueue.main.async {
+                        configuration.userContentController.add(ruleList)
+                    }
+                } else if let error = error {
+                    print("[Barc] Failed to compile cookie blocking rules: \(error)")
+                }
+            }
+        }
+
         return configuration
     }
 

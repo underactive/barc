@@ -189,6 +189,13 @@ struct PrivacySettingsView: View {
                     systemImage: "rectangle.badge.xmark",
                     isOn: $settings.popupBlocking
                 )
+
+                PrivacyToggleRow(
+                    title: "Third-Party Cookie Blocking",
+                    description: "Block cookies from domains other than the site you're visiting.",
+                    systemImage: "cookie",
+                    isOn: $settings.thirdPartyCookieBlocking
+                )
             } header: {
                 Label("Content Blocking", systemImage: "shield.lefthalf.filled")
                     .font(.headline)
@@ -287,7 +294,7 @@ struct PrivacySettingsView: View {
 
                     Spacer()
 
-                    PrivacyScoreBadge(score: privacyScore)
+                    PrivacyScoreBadge(score: privacyScore, maxScore: maxPrivacyScore)
                 }
                 .padding(.vertical, 4)
 
@@ -315,6 +322,8 @@ struct PrivacySettingsView: View {
         .padding()
     }
 
+    private var maxPrivacyScore: Int { 10 }
+
     private var privacyScore: Int {
         var score = 0
         if settings.nonPersistentStorage { score += 1 }
@@ -324,16 +333,21 @@ struct PrivacySettingsView: View {
         if settings.hardwareFingerprintResistance { score += 1 }
         if settings.trackingPixelBlocking { score += 1 }
         if settings.popupBlocking { score += 1 }
+        if settings.thirdPartyCookieBlocking { score += 1 }
         if settings.httpsOnlyMode != .off { score += 1 }
         if settings.referrerPolicy != .defaultPolicy { score += 1 }
         return score
     }
 
+    private var privacyScorePercent: Double {
+        Double(privacyScore) / Double(maxPrivacyScore)
+    }
+
     private var privacyScoreDescription: String {
-        switch privacyScore {
-        case 9: return "Maximum protection enabled"
-        case 7...8: return "Strong protection"
-        case 4...6: return "Moderate protection"
+        switch privacyScorePercent {
+        case 1.0: return "Maximum protection enabled"
+        case 0.8..<1.0: return "Strong protection"
+        case 0.5..<0.8: return "Moderate protection"
         default: return "Limited protection"
         }
     }
@@ -493,10 +507,15 @@ struct PrivacyToggleRow: View {
 
 struct PrivacyScoreBadge: View {
     let score: Int
+    let maxScore: Int
+
+    private var percent: Double {
+        Double(score) / Double(maxScore)
+    }
 
     var body: some View {
         HStack(spacing: 4) {
-            Text("\(score)/9")
+            Text("\(score)/\(maxScore)")
                 .font(.system(size: 18, weight: .bold, design: .rounded))
                 .foregroundColor(scoreColor)
             Image(systemName: scoreIcon)
@@ -512,19 +531,19 @@ struct PrivacyScoreBadge: View {
     }
 
     private var scoreColor: Color {
-        switch score {
-        case 9: return .green
-        case 7...8: return .blue
-        case 4...6: return .orange
+        switch percent {
+        case 1.0: return .green
+        case 0.8..<1.0: return .blue
+        case 0.5..<0.8: return .orange
         default: return .red
         }
     }
 
     private var scoreIcon: String {
-        switch score {
-        case 9: return "shield.checkered"
-        case 7...8: return "shield.lefthalf.filled"
-        case 4...6: return "shield"
+        switch percent {
+        case 1.0: return "shield.checkered"
+        case 0.8..<1.0: return "shield.lefthalf.filled"
+        case 0.5..<0.8: return "shield"
         default: return "shield.slash"
         }
     }

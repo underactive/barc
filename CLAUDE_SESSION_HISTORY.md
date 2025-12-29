@@ -35,6 +35,7 @@ This file documents all development work done on Barc with Claude Code, so futur
 8. **Fraudulent Website Warning** - WebKit's built-in protection
 9. **HTTPS-Only Mode** - Three modes: Off, Upgrade (auto-upgrade HTTP→HTTPS), Strict (block HTTP)
 10. **Referrer Policy Control** - Control what information is sent about previous page (6 policy options)
+11. **Third-Party Cookie Blocking** - Block cookies from domains other than the site you're visiting
 
 ### Domain Whitelist for Persistent Storage
 - Users can whitelist domains (e.g., kagi.com) to stay logged in
@@ -63,11 +64,11 @@ This file documents all development work done on Barc with Claude Code, so futur
 
 ### Privacy Score Indicator (Address Bar)
 - **Dynamic icon** in address bar (right side) reflects current Privacy Score:
-  - 9/9: `shield.checkered` (green) - Maximum protection
-  - 7-8/9: `shield.lefthalf.filled` (blue) - Strong protection
-  - 4-6/9: `shield` (orange) - Moderate protection
-  - 0-3/9: `shield.slash` (red) - Limited protection
-- **Hover tooltip** shows: "Privacy Score: X/9 - [protection level]"
+  - 10/10: `shield.checkered` (green) - Maximum protection
+  - 8-9/10: `shield.lefthalf.filled` (blue) - Strong protection
+  - 5-7/10: `shield` (orange) - Moderate protection
+  - 0-4/10: `shield.slash` (red) - Limited protection
+- **Hover tooltip** shows: "Privacy Score: X/10 - [protection level]"
 - **Clickable**: Opens Settings window directly to Barc Privacy tab
 - Updates in real-time when privacy settings change
 
@@ -174,6 +175,7 @@ open ~/Library/Developer/Xcode/DerivedData/Barc-*/Build/Products/Debug/Barc.app
 9. **Privacy score indicator**: Dynamic shield icon in address bar reflecting privacy score with color/icon changes, tooltip, and click-to-open settings
 10. **HTTPS-Only Mode**: Added three modes (Off, Upgrade, Strict) - auto-upgrades HTTP to HTTPS or blocks HTTP entirely
 11. **Referrer Policy Control**: Added 6 referrer policy options to control what information is shared when navigating between pages
+12. **Third-Party Cookie Blocking**: Uses WKContentRuleList to block cookies from third-party domains
 
 ---
 
@@ -211,3 +213,13 @@ Implementation: WKNavigationDelegate intercepts navigation requests and either u
 - **Strict Origin When Cross-Origin**: Full URL for same-origin, origin only for cross-origin
 
 Implementation: JavaScript injection adds `<meta name="referrer">` tag and optionally overrides `document.referrer` property.
+
+### Third-Party Cookie Blocking
+Blocks cookies set by domains other than the site you're visiting. Uses WKContentRuleList with Safari-style content blocking rules:
+```json
+[{
+    "trigger": { "url-filter": ".*", "load-type": ["third-party"] },
+    "action": { "type": "block-cookies" }
+}]
+```
+This prevents cross-site tracking while allowing first-party cookies needed for login sessions.

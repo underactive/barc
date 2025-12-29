@@ -132,6 +132,10 @@ class PrivacySettings: ObservableObject {
         didSet { objectWillChange.send() }
     }
 
+    @AppStorage("privacy.thirdPartyCookieBlocking") var thirdPartyCookieBlocking: Bool = true {
+        didSet { objectWillChange.send() }
+    }
+
     @AppStorage("privacy.fraudulentWebsiteWarning") var fraudulentWebsiteWarning: Bool = true {
         didSet { objectWillChange.send() }
     }
@@ -209,6 +213,7 @@ class PrivacySettings: ObservableObject {
         hardwareFingerprintResistance = true
         trackingPixelBlocking = true
         popupBlocking = true
+        thirdPartyCookieBlocking = true
         fraudulentWebsiteWarning = true
         httpsOnlyMode = .upgrade
         referrerPolicy = .strictOrigin

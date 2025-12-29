@@ -8,6 +8,8 @@ struct AddressBarView: View {
     @State private var isEditing: Bool = false
     @FocusState private var isFocused: Bool
 
+    private var maxPrivacyScore: Int { 10 }
+
     private var privacyScore: Int {
         var score = 0
         if privacySettings.nonPersistentStorage { score += 1 }
@@ -17,35 +19,40 @@ struct AddressBarView: View {
         if privacySettings.hardwareFingerprintResistance { score += 1 }
         if privacySettings.trackingPixelBlocking { score += 1 }
         if privacySettings.popupBlocking { score += 1 }
+        if privacySettings.thirdPartyCookieBlocking { score += 1 }
         if privacySettings.httpsOnlyMode != .off { score += 1 }
         if privacySettings.referrerPolicy != .defaultPolicy { score += 1 }
         return score
     }
 
+    private var privacyScorePercent: Double {
+        Double(privacyScore) / Double(maxPrivacyScore)
+    }
+
     private var privacyScoreColor: Color {
-        switch privacyScore {
-        case 9: return .green
-        case 7...8: return .blue
-        case 4...6: return .orange
+        switch privacyScorePercent {
+        case 1.0: return .green
+        case 0.8..<1.0: return .blue
+        case 0.5..<0.8: return .orange
         default: return .red
         }
     }
 
     private var privacyScoreIcon: String {
-        switch privacyScore {
-        case 9: return "shield.checkered"
-        case 7...8: return "shield.lefthalf.filled"
-        case 4...6: return "shield"
+        switch privacyScorePercent {
+        case 1.0: return "shield.checkered"
+        case 0.8..<1.0: return "shield.lefthalf.filled"
+        case 0.5..<0.8: return "shield"
         default: return "shield.slash"
         }
     }
 
     private var privacyScoreDescription: String {
-        switch privacyScore {
-        case 9: return "Privacy Score: \(privacyScore)/9 - Maximum protection"
-        case 7...8: return "Privacy Score: \(privacyScore)/9 - Strong protection"
-        case 4...6: return "Privacy Score: \(privacyScore)/9 - Moderate protection"
-        default: return "Privacy Score: \(privacyScore)/9 - Limited protection"
+        switch privacyScorePercent {
+        case 1.0: return "Privacy Score: \(privacyScore)/\(maxPrivacyScore) - Maximum protection"
+        case 0.8..<1.0: return "Privacy Score: \(privacyScore)/\(maxPrivacyScore) - Strong protection"
+        case 0.5..<0.8: return "Privacy Score: \(privacyScore)/\(maxPrivacyScore) - Moderate protection"
+        default: return "Privacy Score: \(privacyScore)/\(maxPrivacyScore) - Limited protection"
         }
     }
 
