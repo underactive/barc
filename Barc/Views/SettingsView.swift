@@ -135,9 +135,6 @@ struct GeneralSettingsView: View {
                     .font(.headline)
             }
 
-            Divider()
-                .padding(.vertical, 8)
-
             Section {
                 HStack {
                     Text("Save Downloaded Files To:")
@@ -153,18 +150,12 @@ struct GeneralSettingsView: View {
                     .font(.headline)
             }
 
-            Divider()
-                .padding(.vertical, 8)
-
             Section {
                 Toggle("Warn when visiting a fraudulent website", isOn: $settings.fraudulentWebsiteWarning)
             } header: {
                 Label("Security", systemImage: "lock.shield")
                     .font(.headline)
             }
-
-            Divider()
-                .padding(.vertical, 8)
 
             Section {
                 // MARK: Indicator Lights
@@ -355,9 +346,6 @@ struct PrivacySettingsView: View {
                     .font(.headline)
             }
 
-            Divider()
-                .padding(.vertical, 8)
-
             Section {
                 TrackerBlockingRow(settings: settings)
 
@@ -388,9 +376,6 @@ struct PrivacySettingsView: View {
                 Label("Content Blocking", systemImage: "shield.lefthalf.filled")
                     .font(.headline)
             }
-
-            Divider()
-                .padding(.vertical, 8)
 
             Section {
                 // HTTPS-Only Mode
@@ -466,9 +451,6 @@ struct PrivacySettingsView: View {
                 Label("Network Privacy", systemImage: "network.badge.shield.half.filled")
                     .font(.headline)
             }
-
-            Divider()
-                .padding(.vertical, 8)
 
             Section {
                 HStack {
