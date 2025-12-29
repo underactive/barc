@@ -2,7 +2,6 @@ import SwiftUI
 
 struct SidebarView: View {
     @EnvironmentObject var browserState: BrowserState
-    @State private var hoveredTabId: UUID?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -31,18 +30,14 @@ struct SidebarView: View {
 
             // Tabs list
             ScrollView {
-                LazyVStack(spacing: 2) {
+                VStack(spacing: 2) {
                     ForEach(browserState.tabs) { tab in
                         TabRowView(
                             tab: tab,
-                            isSelected: browserState.selectedTabId == tab.id,
-                            isHovered: hoveredTabId == tab.id
+                            isSelected: browserState.selectedTabId == tab.id
                         )
                         .onTapGesture {
                             browserState.selectTab(tab)
-                        }
-                        .onHover { isHovered in
-                            hoveredTabId = isHovered ? tab.id : nil
                         }
                         .contextMenu {
                             Button("Close Tab") {
@@ -77,9 +72,9 @@ struct SidebarView: View {
 struct TabRowView: View {
     @ObservedObject var tab: Tab
     let isSelected: Bool
-    let isHovered: Bool
 
     @EnvironmentObject var browserState: BrowserState
+    @State private var isHovered: Bool = false
 
     var body: some View {
         HStack(spacing: 10) {
@@ -125,10 +120,14 @@ struct TabRowView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
+        .contentShape(Rectangle())
         .background(
             RoundedRectangle(cornerRadius: 6)
                 .fill(backgroundColor)
         )
+        .onHover { hovering in
+            isHovered = hovering
+        }
         .animation(.easeInOut(duration: 0.15), value: isSelected)
         .animation(.easeInOut(duration: 0.15), value: isHovered)
     }

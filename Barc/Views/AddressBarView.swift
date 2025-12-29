@@ -179,6 +179,15 @@ struct AddressBarView: View {
         .onAppear {
             inputText = browserState.selectedTab?.url?.absoluteString ?? ""
         }
+        .onChange(of: browserState.focusAddressBarTrigger) { _, _ in
+            DispatchQueue.main.async {
+                isFocused = true
+            }
+        }
+        .onChange(of: browserState.selectedTabId) { _, _ in
+            // Clear focus when switching tabs to allow interactions with other tabs
+            isFocused = false
+        }
     }
 }
 

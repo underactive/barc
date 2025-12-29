@@ -6,6 +6,7 @@ class BrowserState: ObservableObject {
     @Published var tabs: [Tab] = []
     @Published var selectedTabId: UUID?
     @Published var sidebarCollapsed: Bool = false
+    @Published var focusAddressBarTrigger: UUID = UUID()
 
     private let settings = PrivacySettings.shared
 
@@ -22,10 +23,10 @@ class BrowserState: ObservableObject {
     }
 
     init() {
-        createNewTab()
+        createNewTab(shouldFocus: false)
     }
 
-    func createNewTab(url: URL? = nil) {
+    func createNewTab(url: URL? = nil, shouldFocus: Bool = true) {
         let targetURL: URL
         if let url = url {
             targetURL = url
@@ -41,6 +42,10 @@ class BrowserState: ObservableObject {
         let tab = Tab(url: targetURL)
         tabs.append(tab)
         selectedTabId = tab.id
+
+        if shouldFocus {
+            focusAddressBarTrigger = UUID()
+        }
     }
 
     func selectTab(_ tab: Tab) {

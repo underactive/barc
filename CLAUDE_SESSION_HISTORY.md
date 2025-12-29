@@ -189,6 +189,7 @@ open ~/Library/Developer/Xcode/DerivedData/Barc-*/Build/Products/Debug/Barc.app
 15. **Rx/Tx indicators moved**: From sidebar footer to address bar with clickable popover menu
 16. **Loading progress bar**: Animated progress indicator in URL field
 17. **Sound settings expansion**: Added individual Rx/Tx toggles and volume slider
+18. **Address bar autofocus**: URL bar automatically gains focus when opening a new tab (⌘T) for immediate typing
 
 ---
 
@@ -272,3 +273,11 @@ Attempted to move address bar into macOS toolbar to eliminate whitespace above i
 - `.toolbarTitleDisplayMode(.inline)` - still too small
 - NSWindow configuration with `titlebarAppearsTransparent` - didn't help
 - **Conclusion**: macOS toolbar has fixed compact height unsuitable for browser address bars. Safari uses AppKit's NSToolbar with custom configuration. Reverted changes.
+
+### Address Bar Autofocus
+When creating a new tab (⌘T), the address bar now automatically gains focus for immediate typing:
+- Added `shouldFocusAddressBar` published property to `BrowserState`
+- Set to `true` in `createNewTab()` method
+- `AddressBarView` watches for changes via `.onChange(of: browserState.shouldFocusAddressBar)`
+- When triggered, sets `isFocused = true` and resets the flag
+- Standard browser UX pattern - new tab → ready to type
