@@ -329,6 +329,13 @@ struct PrivacySettingsView: View {
                 )
 
                 PrivacyToggleRow(
+                    title: "WebGL Fingerprint Protection",
+                    description: "Mask WebGL renderer and vendor info used for browser identification.",
+                    systemImage: "cube.transparent",
+                    isOn: $settings.webGLFingerprintProtection
+                )
+
+                PrivacyToggleRow(
                     title: "WebRTC IP Leak Protection",
                     description: "Prevent websites from discovering your real IP address through WebRTC.",
                     systemImage: "network.slash",
@@ -495,12 +502,13 @@ struct PrivacySettingsView: View {
         .padding()
     }
 
-    private var maxPrivacyScore: Int { 11 }
+    private var maxPrivacyScore: Int { 12 }
 
     private var privacyScore: Int {
         var score = 0
         if settings.nonPersistentStorage { score += 1 }
         if settings.canvasFingerprintProtection { score += 1 }
+        if settings.webGLFingerprintProtection { score += 1 }
         if settings.webRTCProtection { score += 1 }
         if settings.trackerBlocking { score += 1 }
         if settings.hardwareFingerprintResistance { score += 1 }

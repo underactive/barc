@@ -159,6 +159,10 @@ class PrivacySettings: ObservableObject {
         didSet { objectWillChange.send() }
     }
 
+    @AppStorage("privacy.webGLFingerprintProtection") var webGLFingerprintProtection: Bool = true {
+        didSet { objectWillChange.send() }
+    }
+
     @AppStorage("privacy.webRTCProtection") var webRTCProtection: Bool = true {
         didSet { objectWillChange.send() }
     }
@@ -279,6 +283,7 @@ class PrivacySettings: ObservableObject {
     func resetToDefaults() {
         nonPersistentStorage = true
         canvasFingerprintProtection = true
+        webGLFingerprintProtection = true
         webRTCProtection = true
         trackerBlocking = true
         hardwareFingerprintResistance = true

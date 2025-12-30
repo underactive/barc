@@ -307,6 +307,111 @@ struct WebView: NSViewRepresentable {
             """)
         }
 
+        // WebGL fingerprint protection with randomized GPU per tab
+        if settings.webGLFingerprintProtection {
+            // Common GPU configurations to simulate
+            let gpuConfigs: [(vendor: String, renderer: String)] = [
+                ("Intel Inc.", "Intel Iris OpenGL Engine"),
+                ("Intel Inc.", "Intel HD Graphics 630"),
+                ("Intel Inc.", "Intel UHD Graphics 620"),
+                ("Intel Inc.", "Intel Iris Plus Graphics 640"),
+                ("Intel Inc.", "Intel Iris Pro Graphics 6200"),
+                ("Google Inc. (Intel)", "ANGLE (Intel, Intel(R) UHD Graphics 620, OpenGL 4.1)"),
+                ("Google Inc. (Intel)", "ANGLE (Intel, Intel(R) Iris Plus Graphics 655, OpenGL 4.1)"),
+                ("Google Inc. (AMD)", "ANGLE (AMD, AMD Radeon Pro 5500M, OpenGL 4.1)"),
+                ("Google Inc. (NVIDIA)", "ANGLE (NVIDIA, NVIDIA GeForce GTX 1650, OpenGL 4.1)"),
+                ("AMD", "AMD Radeon Pro 5300M OpenGL Engine"),
+                ("AMD", "AMD Radeon RX 580 OpenGL Engine"),
+                ("Apple", "Apple M1"),
+                ("Apple", "Apple M2"),
+                ("Apple", "Apple M1 Pro"),
+            ]
+
+            // Randomly select a GPU configuration for this tab
+            let selectedGPU = gpuConfigs.randomElement() ?? gpuConfigs[0]
+
+            scriptParts.append("""
+                // Mask WebGL renderer and vendor info (randomized per tab)
+                (function() {
+                    const spoofedVendor = '\(selectedGPU.vendor)';
+                    const spoofedRenderer = '\(selectedGPU.renderer)';
+
+                    const getParameterProxyHandler = {
+                        apply: function(target, thisArg, args) {
+                            const param = args[0];
+                            const gl = thisArg;
+
+                            // UNMASKED_VENDOR_WEBGL
+                            if (param === 37445) {
+                                return spoofedVendor;
+                            }
+                            // UNMASKED_RENDERER_WEBGL
+                            if (param === 37446) {
+                                return spoofedRenderer;
+                            }
+                            // VENDOR
+                            if (param === gl.VENDOR) {
+                                return 'WebKit';
+                            }
+                            // RENDERER
+                            if (param === gl.RENDERER) {
+                                return 'WebKit WebGL';
+                            }
+                            // VERSION
+                            if (param === gl.VERSION) {
+                                return 'WebGL 1.0';
+                            }
+                            // SHADING_LANGUAGE_VERSION
+                            if (param === gl.SHADING_LANGUAGE_VERSION) {
+                                return 'WebGL GLSL ES 1.0';
+                            }
+
+                            return target.apply(thisArg, args);
+                        }
+                    };
+
+                    // Override WebGLRenderingContext.getParameter
+                    if (window.WebGLRenderingContext) {
+                        const originalGetParameter = WebGLRenderingContext.prototype.getParameter;
+                        WebGLRenderingContext.prototype.getParameter = new Proxy(originalGetParameter, getParameterProxyHandler);
+                    }
+
+                    // Override WebGL2RenderingContext.getParameter
+                    if (window.WebGL2RenderingContext) {
+                        const originalGetParameter2 = WebGL2RenderingContext.prototype.getParameter;
+                        WebGL2RenderingContext.prototype.getParameter = new Proxy(originalGetParameter2, getParameterProxyHandler);
+                    }
+
+                    // Also mask the debug renderer info extension
+                    const originalGetExtension = WebGLRenderingContext.prototype.getExtension;
+                    WebGLRenderingContext.prototype.getExtension = function(name) {
+                        if (name === 'WEBGL_debug_renderer_info') {
+                            return {
+                                UNMASKED_VENDOR_WEBGL: 37445,
+                                UNMASKED_RENDERER_WEBGL: 37446
+                            };
+                        }
+                        return originalGetExtension.apply(this, arguments);
+                    };
+
+                    if (window.WebGL2RenderingContext) {
+                        const originalGetExtension2 = WebGL2RenderingContext.prototype.getExtension;
+                        WebGL2RenderingContext.prototype.getExtension = function(name) {
+                            if (name === 'WEBGL_debug_renderer_info') {
+                                return {
+                                    UNMASKED_VENDOR_WEBGL: 37445,
+                                    UNMASKED_RENDERER_WEBGL: 37446
+                                };
+                            }
+                            return originalGetExtension2.apply(this, arguments);
+                        };
+                    }
+
+                    console.log('[Barc] WebGL fingerprint protection enabled - spoofing: ' + spoofedVendor + ' / ' + spoofedRenderer);
+                })();
+            """)
+        }
+
         // WebRTC IP leak protection
         if settings.webRTCProtection {
             scriptParts.append("""
