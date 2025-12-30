@@ -9,10 +9,15 @@ class BrowserState: ObservableObject {
             // Keep monitors in sync with the active tab
             NetworkActivityMonitor.shared.activeTabId = selectedTabId
             BlockedRequestsMonitor.shared.activeTabId = selectedTabId
+            // Deactivate element picker when switching tabs
+            if isElementPickerActive {
+                deactivateElementPicker()
+            }
         }
     }
     @Published var sidebarCollapsed: Bool = false
     @Published var focusAddressBarTrigger: UUID = UUID()
+    @Published var isElementPickerActive: Bool = false
 
     private let settings = PrivacySettings.shared
 
@@ -130,5 +135,320 @@ class BrowserState: ObservableObject {
     func goHome() {
         guard let tab = selectedTab else { return }
         tab.webView?.load(URLRequest(url: homePageURL))
+    }
+
+    // MARK: - Element Picker (xkill mode)
+
+    func toggleElementPicker() {
+        if isElementPickerActive {
+            deactivateElementPicker()
+        } else {
+            activateElementPicker()
+        }
+    }
+
+    func activateElementPicker() {
+        guard let webView = selectedTab?.webView else { return }
+
+        let script = """
+        (function() {
+            if (window.__barcElementPicker) {
+                window.__barcElementPicker.activate();
+                return;
+            }
+
+            const picker = {
+                active: false,
+                overlay: null,
+                currentTarget: null,
+
+                activate: function() {
+                    if (this.active) return;
+                    this.active = true;
+
+                    // Create overlay for highlighting
+                    this.overlay = document.createElement('div');
+                    this.overlay.id = '__barc_picker_overlay';
+                    this.overlay.style.cssText = `
+                        position: fixed;
+                        pointer-events: none;
+                        z-index: 2147483647;
+                        border: 2px solid #ff4444;
+                        background: rgba(255, 68, 68, 0.15);
+                        box-shadow: 0 0 0 2px rgba(255, 68, 68, 0.3);
+                        transition: all 0.05s ease-out;
+                        display: none;
+                    `;
+                    document.body.appendChild(this.overlay);
+
+                    // Add crosshair cursor style
+                    const style = document.createElement('style');
+                    style.id = '__barc_picker_style';
+                    style.textContent = `
+                        * { cursor: crosshair !important; }
+                        #__barc_picker_overlay {
+                            display: block;
+                        }
+                    `;
+                    document.head.appendChild(style);
+
+                    // Add event listeners
+                    document.addEventListener('mousemove', this.handleMouseMove, true);
+                    document.addEventListener('click', this.handleClick, true);
+                    document.addEventListener('keydown', this.handleKeyDown, true);
+
+                    console.log('[Barc] Element picker activated - click to remove elements, press Escape to cancel');
+                },
+
+                deactivate: function() {
+                    if (!this.active) return;
+                    this.active = false;
+
+                    // Remove overlay
+                    const overlay = document.getElementById('__barc_picker_overlay');
+                    if (overlay) overlay.remove();
+
+                    // Remove style
+                    const style = document.getElementById('__barc_picker_style');
+                    if (style) style.remove();
+
+                    // Remove event listeners
+                    document.removeEventListener('mousemove', this.handleMouseMove, true);
+                    document.removeEventListener('click', this.handleClick, true);
+                    document.removeEventListener('keydown', this.handleKeyDown, true);
+
+                    this.currentTarget = null;
+                    console.log('[Barc] Element picker deactivated');
+                },
+
+                handleMouseMove: function(e) {
+                    const picker = window.__barcElementPicker;
+                    if (!picker.active) return;
+
+                    let target = e.target;
+
+                    // Skip our own overlay
+                    if (target.id === '__barc_picker_overlay') return;
+
+                    // Skip html and body - go to their children instead
+                    if (target === document.documentElement || target === document.body) {
+                        return;
+                    }
+
+                    picker.currentTarget = target;
+
+                    // Update overlay position
+                    const rect = target.getBoundingClientRect();
+                    picker.overlay.style.left = rect.left + 'px';
+                    picker.overlay.style.top = rect.top + 'px';
+                    picker.overlay.style.width = rect.width + 'px';
+                    picker.overlay.style.height = rect.height + 'px';
+                    picker.overlay.style.display = 'block';
+                },
+
+                handleClick: function(e) {
+                    const picker = window.__barcElementPicker;
+                    if (!picker.active) return;
+
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+
+                    if (picker.currentTarget && picker.currentTarget.id !== '__barc_picker_overlay') {
+                        const target = picker.currentTarget;
+                        const tagName = target.tagName.toLowerCase();
+                        const className = target.className;
+
+                        // Thanos snap disintegration effect
+                        picker.disintegrate(target);
+
+                        // Hide overlay temporarily
+                        picker.overlay.style.display = 'none';
+                        picker.currentTarget = null;
+
+                        console.log('[Barc] Removed element:', tagName, className ? '.' + className.split(' ')[0] : '');
+                    }
+
+                    return false;
+                },
+
+                disintegrate: function(element) {
+                    const rect = element.getBoundingClientRect();
+                    const computedStyle = window.getComputedStyle(element);
+                    const bgColor = computedStyle.backgroundColor || 'rgba(100, 100, 100, 1)';
+
+                    // Create canvas for GPU-accelerated animation
+                    const canvas = document.createElement('canvas');
+                    const padding = 150; // Extra space for particles to drift
+                    canvas.width = rect.width + padding * 2;
+                    canvas.height = rect.height + padding * 2;
+                    canvas.style.cssText = `
+                        position: fixed;
+                        left: ${rect.left - padding}px;
+                        top: ${rect.top - padding}px;
+                        width: ${canvas.width}px;
+                        height: ${canvas.height}px;
+                        pointer-events: none;
+                        z-index: 2147483646;
+                        will-change: transform;
+                    `;
+                    document.body.appendChild(canvas);
+
+                    const ctx = canvas.getContext('2d');
+
+                    // Fixed small particle size for consistent look
+                    const particleSize = 4;
+                    const cols = Math.ceil(rect.width / particleSize);
+                    const rows = Math.ceil(rect.height / particleSize);
+
+                    // Get element color
+                    let r = 128, g = 128, b = 128;
+                    const match = bgColor.match(/\\d+/g);
+                    if (match && match.length >= 3) {
+                        r = parseInt(match[0]);
+                        g = parseInt(match[1]);
+                        b = parseInt(match[2]);
+                    }
+                    // If transparent, use gray
+                    if (bgColor === 'rgba(0, 0, 0, 0)') { r = 136; g = 136; b = 136; }
+
+                    // Create particles
+                    const particles = [];
+                    for (let row = 0; row < rows; row++) {
+                        for (let col = 0; col < cols; col++) {
+                            const x = col * particleSize + padding;
+                            const y = row * particleSize + padding;
+
+                            // Vary color slightly
+                            const cr = Math.min(255, Math.max(0, r + (Math.random() - 0.5) * 30));
+                            const cg = Math.min(255, Math.max(0, g + (Math.random() - 0.5) * 30));
+                            const cb = Math.min(255, Math.max(0, b + (Math.random() - 0.5) * 30));
+
+                            // Wave delay from left to right
+                            const delay = (col / cols) * 0.4 + Math.random() * 0.2;
+
+                            particles.push({
+                                x, y,
+                                startX: x, startY: y,
+                                size: particleSize,
+                                color: `rgb(${cr|0},${cg|0},${cb|0})`,
+                                vx: 60 + Math.random() * 100,
+                                vy: -30 + Math.random() * 60 - (row / rows) * 40,
+                                delay,
+                                opacity: 1,
+                                rotation: Math.random() * Math.PI * 2,
+                                rotationSpeed: (Math.random() - 0.5) * 10
+                            });
+                        }
+                    }
+
+                    // Hide original element
+                    element.style.visibility = 'hidden';
+
+                    // Animation loop
+                    const duration = 800;
+                    const startTime = performance.now();
+
+                    const animate = (now) => {
+                        const elapsed = now - startTime;
+                        const progress = Math.min(elapsed / duration, 1);
+
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                        let activeParticles = 0;
+                        for (const p of particles) {
+                            // Apply delay
+                            const localProgress = Math.max(0, (progress - p.delay) / (1 - p.delay));
+                            if (localProgress <= 0) {
+                                // Still waiting, draw at original position
+                                ctx.globalAlpha = 1;
+                                ctx.fillStyle = p.color;
+                                ctx.beginPath();
+                                ctx.arc(p.startX, p.startY, p.size / 2, 0, Math.PI * 2);
+                                ctx.fill();
+                                activeParticles++;
+                                continue;
+                            }
+
+                            if (localProgress >= 1) continue;
+
+                            // Easing
+                            const ease = 1 - Math.pow(1 - localProgress, 3);
+
+                            // Update position
+                            const x = p.startX + p.vx * ease;
+                            const y = p.startY + p.vy * ease;
+                            const scale = 1 - ease;
+                            const opacity = 1 - ease;
+
+                            if (opacity > 0.01) {
+                                ctx.globalAlpha = opacity;
+                                ctx.fillStyle = p.color;
+                                ctx.beginPath();
+                                ctx.arc(x, y, (p.size / 2) * scale, 0, Math.PI * 2);
+                                ctx.fill();
+                                activeParticles++;
+                            }
+                        }
+
+                        if (progress < 1 && activeParticles > 0) {
+                            requestAnimationFrame(animate);
+                        } else {
+                            // Clean up
+                            element.remove();
+                            canvas.remove();
+                        }
+                    };
+
+                    requestAnimationFrame(animate);
+                },
+
+                handleKeyDown: function(e) {
+                    const picker = window.__barcElementPicker;
+                    if (!picker.active) return;
+
+                    // Escape to cancel
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        picker.deactivate();
+                        // Notify Swift
+                        window.webkit.messageHandlers.barcElementPicker?.postMessage({action: 'deactivated'});
+                    }
+                }
+            };
+
+            // Bind methods
+            picker.handleMouseMove = picker.handleMouseMove.bind(picker);
+            picker.handleClick = picker.handleClick.bind(picker);
+            picker.handleKeyDown = picker.handleKeyDown.bind(picker);
+
+            window.__barcElementPicker = picker;
+            picker.activate();
+        })();
+        """
+
+        webView.evaluateJavaScript(script) { _, error in
+            if let error = error {
+                print("[Barc] Element picker activation failed: \(error)")
+            }
+        }
+
+        isElementPickerActive = true
+    }
+
+    func deactivateElementPicker() {
+        guard let webView = selectedTab?.webView else {
+            isElementPickerActive = false
+            return
+        }
+
+        let script = """
+        if (window.__barcElementPicker) {
+            window.__barcElementPicker.deactivate();
+        }
+        """
+
+        webView.evaluateJavaScript(script) { _, _ in }
+        isElementPickerActive = false
     }
 }

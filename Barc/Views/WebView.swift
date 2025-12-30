@@ -7,6 +7,7 @@ struct WebView: NSViewRepresentable {
     private let settings = PrivacySettings.shared
 
     static let networkMessageHandler = "barcNetwork"
+    static let elementPickerMessageHandler = "barcElementPicker"
 
     func makeNSView(context: Context) -> WKWebView {
         let configuration = createPrivacyConfiguration(coordinator: context.coordinator)
@@ -32,7 +33,7 @@ struct WebView: NSViewRepresentable {
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(tab: tab, settings: settings)
+        Coordinator(tab: tab, settings: settings, browserState: browserState)
     }
 
     private func createPrivacyConfiguration(coordinator: Coordinator) -> WKWebViewConfiguration {
@@ -51,6 +52,9 @@ struct WebView: NSViewRepresentable {
 
         // Add message handler for network activity reporting
         contentController.add(coordinator, name: Self.networkMessageHandler)
+
+        // Add message handler for element picker
+        contentController.add(coordinator, name: Self.elementPickerMessageHandler)
 
         // Inject network monitoring script (must be first, before privacy scripts)
         injectNetworkMonitoringScript(into: contentController)
@@ -1324,31 +1328,44 @@ struct WebView: NSViewRepresentable {
     class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
         let tab: Tab
         let settings: PrivacySettings
+        weak var browserState: BrowserState?
         let networkMonitor = NetworkActivityMonitor.shared
         let blockedRequestsMonitor = BlockedRequestsMonitor.shared
         private var observations: [NSKeyValueObservation] = []
 
-        init(tab: Tab, settings: PrivacySettings) {
+        init(tab: Tab, settings: PrivacySettings, browserState: BrowserState) {
             self.tab = tab
             self.settings = settings
+            self.browserState = browserState
         }
 
         // MARK: - WKScriptMessageHandler
 
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-            guard message.name == WebView.networkMessageHandler,
-                  let body = message.body as? [String: Any],
-                  let type = body["type"] as? String else {
+            // Handle network activity messages
+            if message.name == WebView.networkMessageHandler,
+               let body = message.body as? [String: Any],
+               let type = body["type"] as? String {
+                switch type {
+                case "tx":
+                    networkMonitor.reportTransmit(tabId: tab.id)
+                case "rx":
+                    networkMonitor.reportReceive(tabId: tab.id)
+                default:
+                    break
+                }
                 return
             }
 
-            switch type {
-            case "tx":
-                networkMonitor.reportTransmit(tabId: tab.id)
-            case "rx":
-                networkMonitor.reportReceive(tabId: tab.id)
-            default:
-                break
+            // Handle element picker messages
+            if message.name == WebView.elementPickerMessageHandler,
+               let body = message.body as? [String: Any],
+               let action = body["action"] as? String {
+                if action == "deactivated" {
+                    DispatchQueue.main.async { [weak self] in
+                        self?.browserState?.isElementPickerActive = false
+                    }
+                }
             }
         }
 

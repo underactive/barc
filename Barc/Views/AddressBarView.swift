@@ -177,6 +177,15 @@ struct AddressBarView: View {
                 }
             }
 
+            // Element picker (xkill) button
+            Button(action: { browserState.toggleElementPicker() }) {
+                Image(systemName: "hammer")
+                    .font(.system(size: 14))
+                    .foregroundColor(browserState.isElementPickerActive ? .red : .secondary)
+            }
+            .buttonStyle(.plain)
+            .help(browserState.isElementPickerActive ? "Cancel element picker (Esc)" : "Remove page elements")
+
             // Privacy shield indicator with blocked count badge
             Button(action: { showingPrivacyPopover.toggle() }) {
                 ZStack(alignment: .topTrailing) {
