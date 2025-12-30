@@ -460,6 +460,60 @@ struct WebView: NSViewRepresentable {
             """)
         }
 
+        // Clipboard access blocking
+        if settings.clipboardAccessBlocking {
+            scriptParts.append("""
+                // Block clipboard read access
+                (function() {
+                    if (navigator.clipboard) {
+                        // Block readText
+                        const originalReadText = navigator.clipboard.readText;
+                        navigator.clipboard.readText = function() {
+                            console.log('[Barc] Blocked clipboard read access');
+                            return Promise.reject(new DOMException('Clipboard access denied by privacy settings', 'NotAllowedError'));
+                        };
+
+                        // Block read (for all clipboard items)
+                        const originalRead = navigator.clipboard.read;
+                        navigator.clipboard.read = function() {
+                            console.log('[Barc] Blocked clipboard read access');
+                            return Promise.reject(new DOMException('Clipboard access denied by privacy settings', 'NotAllowedError'));
+                        };
+
+                        // Note: writeText and write are still allowed for user-initiated copy actions
+                    }
+
+                    // Also block the older execCommand approach for reading
+                    const originalExecCommand = document.execCommand;
+                    document.execCommand = function(command, ...args) {
+                        if (command.toLowerCase() === 'paste') {
+                            console.log('[Barc] Blocked paste command');
+                            return false;
+                        }
+                        return originalExecCommand.apply(this, [command, ...args]);
+                    };
+
+                    // Block clipboardData on paste events from exposing data to scripts
+                    document.addEventListener('paste', function(e) {
+                        if (e.clipboardData) {
+                            // Only block programmatic access, not user-initiated pastes in input fields
+                            const target = e.target;
+                            const isInputField = target.tagName === 'INPUT' ||
+                                                 target.tagName === 'TEXTAREA' ||
+                                                 target.isContentEditable;
+                            if (!isInputField) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                console.log('[Barc] Blocked clipboard data access on paste event');
+                            }
+                        }
+                    }, true);
+
+                    console.log('[Barc] Clipboard access blocking enabled');
+                })();
+            """)
+        }
+
         // Tracking pixel blocking
         if settings.trackingPixelBlocking {
             scriptParts.append("""

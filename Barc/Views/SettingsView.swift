@@ -379,6 +379,8 @@ struct PrivacySettingsView: View {
 
                 CookieBannerRow(settings: settings)
 
+                ClipboardBlockingRow(settings: settings)
+
                 // Custom Blocklist
                 CustomBlocklistView(settings: settings, newDomain: $newBlockedDomain)
             } header: {
@@ -502,7 +504,7 @@ struct PrivacySettingsView: View {
         .padding()
     }
 
-    private var maxPrivacyScore: Int { 12 }
+    private var maxPrivacyScore: Int { 13 }
 
     private var privacyScore: Int {
         var score = 0
@@ -516,6 +518,7 @@ struct PrivacySettingsView: View {
         if settings.popupBlocking { score += 1 }
         if settings.thirdPartyCookieBlocking { score += 1 }
         if settings.cookieBannerAutoReject { score += 1 }
+        if settings.clipboardAccessBlocking { score += 1 }
         if settings.httpsOnlyMode != .off { score += 1 }
         if settings.referrerPolicy != .defaultPolicy { score += 1 }
         return score
@@ -824,6 +827,89 @@ struct CookieBannerRow: View {
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(12)
+            .frame(width: 300)
+        }
+    }
+}
+
+struct ClipboardBlockingRow: View {
+    @ObservedObject var settings: PrivacySettings
+    @State private var showingInfo = false
+
+    var body: some View {
+        Toggle(isOn: $settings.clipboardAccessBlocking) {
+            HStack(spacing: 12) {
+                Image(systemName: "doc.on.clipboard")
+                    .font(.system(size: 16))
+                    .foregroundColor(settings.clipboardAccessBlocking ? .accentColor : .secondary)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Clipboard Access Blocking")
+                        .font(.system(size: 13, weight: .medium))
+                    HStack(spacing: 0) {
+                        Text("Prevent sites from silently reading your clipboard. ")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                        Button("More info") {
+                            showingInfo = true
+                        }
+                        .font(.system(size: 11))
+                        .buttonStyle(.plain)
+                        .foregroundColor(.accentColor)
+                    }
+                }
+            }
+        }
+        .toggleStyle(.switch)
+        .padding(.vertical, 4)
+        .popover(isPresented: $showingInfo, arrowEdge: .trailing) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "doc.on.clipboard.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("What's Blocked")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Blocks navigator.clipboard.readText() and read()"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Blocks document.execCommand('paste')"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Blocks paste events from exposing clipboard data to scripts"
+                    )
+                }
+
+                Divider()
+
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.green)
+                    Text("What's Allowed")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "checkmark",
+                        text: "Pasting in input fields and text areas (user-initiated)"
+                    )
+                    InfoRow(
+                        icon: "checkmark",
+                        text: "Copy actions (writeText and write)"
+                    )
                 }
             }
             .padding(12)

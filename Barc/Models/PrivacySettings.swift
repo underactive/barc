@@ -191,6 +191,10 @@ class PrivacySettings: ObservableObject {
         didSet { objectWillChange.send() }
     }
 
+    @AppStorage("privacy.clipboardAccessBlocking") var clipboardAccessBlocking: Bool = true {
+        didSet { objectWillChange.send() }
+    }
+
     @AppStorage("privacy.fraudulentWebsiteWarning") var fraudulentWebsiteWarning: Bool = true {
         didSet { objectWillChange.send() }
     }
@@ -291,6 +295,7 @@ class PrivacySettings: ObservableObject {
         popupBlocking = true
         thirdPartyCookieBlocking = true
         cookieBannerAutoReject = true
+        clipboardAccessBlocking = true
         fraudulentWebsiteWarning = true
         httpsOnlyMode = .upgrade
         referrerPolicy = .strictOrigin
