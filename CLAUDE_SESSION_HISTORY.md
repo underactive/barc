@@ -25,17 +25,37 @@ This file documents all development work done on Barc with Claude Code, so futur
 - **Keyboard shortcuts**: ⌘T (new tab), ⌘W (close tab), ⌘R (reload), ⌘[ (back), ⌘] (forward)
 
 ### Privacy Features (All Toggleable in Settings)
+
+**Storage Section:**
 1. **Non-Persistent Storage** - Clears cookies/storage on app quit (with whitelist support)
-2. **Canvas Fingerprint Protection** - Spoofs canvas data to prevent fingerprinting
-3. **WebRTC IP Leak Protection** - Disables ICE servers to prevent IP leaks
-4. **Tracker Blocking** - Blocks known tracking domains
-5. **Hardware Fingerprint Resistance** - Spoofs hardware info (CPU cores, memory, etc.)
-6. **Tracking Pixel Blocking** - Blocks common tracking pixel domains
-7. **Popup Blocking** - Prevents unwanted popups
-8. **Fraudulent Website Warning** - WebKit's built-in protection
-9. **HTTPS-Only Mode** - Three modes: Off, Upgrade (auto-upgrade HTTP→HTTPS), Strict (block HTTP)
-10. **Referrer Policy Control** - Control what information is sent about previous page (6 policy options)
-11. **Third-Party Cookie Blocking** - Block cookies from domains other than the site you're visiting
+2. **Storage Whitelist** - Allow specific domains to persist data across sessions
+
+**Fingerprinting Protection Section:**
+3. **Canvas Fingerprint Protection** - Spoofs canvas data to prevent fingerprinting
+4. **WebGL Fingerprint Protection** - Masks WebGL renderer and vendor info
+5. **WebRTC IP Leak Protection** - Disables ICE servers to prevent IP leaks
+6. **Hardware Fingerprint Resistance** - Spoofs hardware info (CPU cores, memory, etc.)
+7. **Font Fingerprint Protection** - Limits detectable fonts to common subset
+8. **AudioContext Fingerprint Protection** - Spoofs audio processing characteristics
+9. **Battery API Blocking** - Blocks battery status API (fingerprinting vector)
+10. **Language Spoofing** - Reports common language to reduce fingerprinting
+11. **Timezone Spoofing** - Reports common timezone to reduce fingerprinting
+12. **Screen Resolution Spoofing** - Reports common screen dimensions
+
+**Content Blocking Section:**
+13. **Tracker Blocking** - Blocks known tracking domains
+14. **Tracking Pixel Blocking** - Blocks common tracking pixel domains
+15. **Popup Blocking** - Prevents unwanted popups
+16. **Third-Party Cookie Blocking** - Block cookies from domains other than the site you're visiting
+17. **Cookie Banner Auto-Reject** - Automatically dismisses cookie consent popups
+18. **Clipboard Access Blocking** - Prevents sites from silently reading clipboard
+
+**Network Privacy Section:**
+19. **HTTPS-Only Mode** - Three modes: Off, Upgrade (auto-upgrade HTTP→HTTPS), Strict (block HTTP)
+20. **Referrer Policy Control** - Control what information is sent about previous page (6 policy options)
+
+**General Settings:**
+21. **Fraudulent Website Warning** - WebKit's built-in protection
 
 ### Domain Whitelist for Persistent Storage
 - Users can whitelist domains (e.g., kagi.com) to stay logged in
@@ -198,6 +218,11 @@ open ~/Library/Developer/Xcode/DerivedData/Barc-*/Build/Products/Debug/Barc.app
 20. **Network Activity settings refactor**: Reorganized into Indicator Lights and Sounds subsections with independent scope controls
 21. **Scope settings**: Separate "All Tabs vs Active Tab Only" controls for URL bar indicators and sounds
 22. **Default changes**: Sounds enabled by default, scopes default to Active Tab Only
+23. **Additional fingerprinting protections**: WebGL, Font, AudioContext, Battery API, Language, Timezone, Screen Resolution spoofing
+24. **Cookie Banner Auto-Reject**: Automatically dismisses cookie consent popups from major providers
+25. **Clipboard Access Blocking**: Prevents sites from silently reading clipboard contents
+26. **Settings reorganization**: Moved Non-Persistent Storage and Storage Whitelist to new "Storage" section at top of privacy settings
+27. **Fingerprinting warning dialog**: Shows warning when toggling fingerprinting options that changes take effect for new tabs, with "Don't show again" checkbox
 
 ---
 
@@ -214,7 +239,7 @@ open ~/Library/Developer/Xcode/DerivedData/Barc-*/Build/Products/Debug/Barc.app
 
 ---
 
-*Last updated: December 29, 2024 (Session 2)*
+*Last updated: December 29, 2024 (Session 3)*
 
 ---
 
@@ -340,3 +365,60 @@ enum NetworkSoundScope: String, CaseIterable, Identifiable {
 }
 ```
 Used by both indicator scope and sound scope settings.
+
+### Additional Fingerprinting Protections (Session 3)
+Added comprehensive fingerprinting protection features:
+- **WebGL Fingerprint Protection** - Masks WebGL renderer/vendor info
+- **Font Fingerprint Protection** - Limits detectable fonts to common subset
+- **AudioContext Fingerprint Protection** - Spoofs audio processing characteristics
+- **Battery API Blocking** - Blocks navigator.getBattery() and related APIs
+- **Language Spoofing** - Reports common language (e.g., en-US, en-GB) with picker
+- **Timezone Spoofing** - Reports common timezone with picker (e.g., America/New_York, Europe/London)
+- **Screen Resolution Spoofing** - Reports common resolutions (e.g., 1920×1080) with picker
+
+Each spoofing feature has an "Auto" mode that picks a value different from the system setting.
+
+### Cookie Banner Auto-Reject
+Automatically detects and dismisses cookie consent popups from major providers:
+- OneTrust, Cookiebot, Quantcast, TrustArc, Didomi, Klaro, Complianz, CookieYes, Iubenda, Borlabs Cookie
+- Uses MutationObserver to handle dynamically loaded banners
+- Searches for reject/decline buttons using selectors and text patterns
+- Disconnects observer after 10 seconds to save resources
+
+### Clipboard Access Blocking
+Prevents sites from silently reading clipboard contents:
+- Blocks `navigator.clipboard.readText()` and `read()`
+- Blocks `document.execCommand('paste')`
+- Blocks paste events from exposing clipboard data to scripts
+- Still allows: pasting in input fields (user-initiated), copy actions
+
+### Settings Reorganization
+Privacy settings reorganized into clearer sections:
+1. **Storage** (NEW - at top): Non-Persistent Storage, Storage Whitelist
+2. **Fingerprinting Protection**: All fingerprint-related toggles
+3. **Content Blocking**: Tracker blocking, pixel blocking, popups, cookies, clipboard
+4. **Network Privacy**: HTTPS-Only Mode, Referrer Policy
+5. **Overview**: Privacy Score display, Reset to Defaults button
+
+### Fingerprinting Warning Dialog
+When any fingerprinting protection toggle is changed, a dialog appears:
+- **Message**: "This setting will take effect for new tabs. Existing tabs will continue using the previous setting until reloaded."
+- **Checkbox**: "Don't show this again" - persists preference via `suppressFingerprintWarning` in PrivacySettings
+- Custom `FingerprintWarningDialog` sheet component
+- `FingerprintToggleRow` wrapper component triggers the dialog on toggle change
+- Applied to all 10 fingerprinting protection toggles
+
+### New Components Added
+- `FingerprintWarningDialog` - Custom sheet dialog with "Don't show again" checkbox
+- `FingerprintToggleRow` - Wrapper for fingerprint toggles that triggers warning
+- `BatteryAPIBlockingRow` - Toggle with "More info" popover
+- `LanguageSpoofingRow` - Toggle with language picker and info popover
+- `TimezoneSpoofingRow` - Toggle with timezone picker and info popover
+- `ScreenResolutionSpoofingRow` - Toggle with resolution picker and info popover
+- `CookieBannerRow` - Toggle with supported providers info popover
+- `ClipboardBlockingRow` - Toggle with blocked/allowed actions info popover
+
+### New Enums Added
+- `SpoofedLanguage` - Language options (auto, en-US, en-GB, es, fr, de, etc.)
+- `SpoofedTimezone` - Timezone options (auto, UTC, America/New_York, Europe/London, etc.)
+- `SpoofedResolution` - Resolution options (auto, 1920×1080, 1366×768, etc.)
