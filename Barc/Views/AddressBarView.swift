@@ -12,7 +12,7 @@ struct AddressBarView: View {
     @State private var showingPrivacyPopover: Bool = false
     @FocusState private var isFocused: Bool
 
-    private var maxPrivacyScore: Int { 18 }
+    private var maxPrivacyScore: Int { 19 }
 
     private var privacyScore: Int {
         var score = 0
@@ -27,6 +27,7 @@ struct AddressBarView: View {
         if privacySettings.batteryAPIBlocking { score += 1 }
         if privacySettings.languageSpoofing { score += 1 }
         if privacySettings.timezoneSpoofing { score += 1 }
+        if privacySettings.screenResolutionSpoofing { score += 1 }
         if privacySettings.trackingPixelBlocking { score += 1 }
         if privacySettings.popupBlocking { score += 1 }
         if privacySettings.thirdPartyCookieBlocking { score += 1 }

@@ -368,6 +368,8 @@ struct PrivacySettingsView: View {
                 LanguageSpoofingRow(settings: settings)
 
                 TimezoneSpoofingRow(settings: settings)
+
+                ScreenResolutionSpoofingRow(settings: settings)
             } header: {
                 Label("Fingerprinting Protection", systemImage: "hand.raised")
                     .font(.headline)
@@ -524,7 +526,7 @@ struct PrivacySettingsView: View {
         .padding()
     }
 
-    private var maxPrivacyScore: Int { 18 }
+    private var maxPrivacyScore: Int { 19 }
 
     private var privacyScore: Int {
         var score = 0
@@ -539,6 +541,7 @@ struct PrivacySettingsView: View {
         if settings.batteryAPIBlocking { score += 1 }
         if settings.languageSpoofing { score += 1 }
         if settings.timezoneSpoofing { score += 1 }
+        if settings.screenResolutionSpoofing { score += 1 }
         if settings.trackingPixelBlocking { score += 1 }
         if settings.popupBlocking { score += 1 }
         if settings.thirdPartyCookieBlocking { score += 1 }
@@ -1251,6 +1254,133 @@ struct TimezoneSpoofingRow: View {
                         .foregroundColor(.secondary)
 
                     Text("Automatically picks a timezone different from your system timezone. If your system is America/New_York, it uses Europe/London; otherwise it uses America/New_York.")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(12)
+            .frame(width: 300)
+        }
+    }
+}
+
+struct ScreenResolutionSpoofingRow: View {
+    @ObservedObject var settings: PrivacySettings
+    @State private var showingInfo = false
+
+    private var systemResolution: String {
+        if let screen = NSScreen.main {
+            let size = screen.frame.size
+            return "\(Int(size.width)) × \(Int(size.height))"
+        }
+        return "Unknown"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle(isOn: $settings.screenResolutionSpoofing) {
+                HStack(spacing: 12) {
+                    Image(systemName: "display")
+                        .font(.system(size: 16))
+                        .foregroundColor(settings.screenResolutionSpoofing ? .accentColor : .secondary)
+                        .frame(width: 24)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Screen Resolution Spoofing")
+                            .font(.system(size: 13, weight: .medium))
+                        HStack(spacing: 0) {
+                            Text("Report common screen dimensions. ")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                            Button("More info") {
+                                showingInfo = true
+                            }
+                            .font(.system(size: 11))
+                            .buttonStyle(.plain)
+                            .foregroundColor(.accentColor)
+                        }
+                    }
+                }
+            }
+            .toggleStyle(.switch)
+
+            // Resolution picker
+            HStack {
+                Text("Spoofed Resolution:")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+
+                Picker("", selection: $settings.spoofedResolution) {
+                    ForEach(SpoofedResolution.allCases) { res in
+                        Text(res.displayName).tag(res)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(maxWidth: 200)
+            }
+            .padding(.leading, 36)
+            .disabled(!settings.screenResolutionSpoofing)
+            .opacity(settings.screenResolutionSpoofing ? 1.0 : 0.5)
+
+            Text("System resolution: \(systemResolution)")
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
+                .padding(.leading, 36)
+        }
+        .padding(.vertical, 4)
+        .popover(isPresented: $showingInfo, arrowEdge: .trailing) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "display")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("How It Works")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                Text("Your screen resolution is a common fingerprinting vector. Unusual resolutions make you more identifiable. This reports a common resolution like 1920×1080 to blend in.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Divider()
+
+                HStack {
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("What's Spoofed")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "screen.width / screen.height"
+                    )
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "screen.availWidth / screen.availHeight"
+                    )
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "window.outerWidth / window.outerHeight"
+                    )
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "window.devicePixelRatio (set to 1)"
+                    )
+                }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Auto Mode")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.secondary)
+
+                    Text("Uses 1920×1080 (Full HD), the most common screen resolution worldwide.")
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)

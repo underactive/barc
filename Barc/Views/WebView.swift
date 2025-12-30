@@ -955,6 +955,94 @@ struct WebView: NSViewRepresentable {
             """)
         }
 
+        // Screen resolution spoofing
+        if settings.screenResolutionSpoofing {
+            let selectedResolution = settings.spoofedResolution
+            let width = selectedResolution.width
+            let height = selectedResolution.height
+
+            scriptParts.append("""
+                // Spoof screen resolution
+                (function() {
+                    const spoofedWidth = \(width);
+                    const spoofedHeight = \(height);
+                    const spoofedAvailWidth = spoofedWidth;
+                    const spoofedAvailHeight = spoofedHeight - 40; // Account for taskbar
+
+                    // Override screen properties
+                    Object.defineProperty(screen, 'width', {
+                        get: function() { return spoofedWidth; },
+                        configurable: true
+                    });
+
+                    Object.defineProperty(screen, 'height', {
+                        get: function() { return spoofedHeight; },
+                        configurable: true
+                    });
+
+                    Object.defineProperty(screen, 'availWidth', {
+                        get: function() { return spoofedAvailWidth; },
+                        configurable: true
+                    });
+
+                    Object.defineProperty(screen, 'availHeight', {
+                        get: function() { return spoofedAvailHeight; },
+                        configurable: true
+                    });
+
+                    Object.defineProperty(screen, 'availLeft', {
+                        get: function() { return 0; },
+                        configurable: true
+                    });
+
+                    Object.defineProperty(screen, 'availTop', {
+                        get: function() { return 0; },
+                        configurable: true
+                    });
+
+                    // Override window outer dimensions
+                    Object.defineProperty(window, 'outerWidth', {
+                        get: function() { return spoofedWidth; },
+                        configurable: true
+                    });
+
+                    Object.defineProperty(window, 'outerHeight', {
+                        get: function() { return spoofedHeight; },
+                        configurable: true
+                    });
+
+                    // Override screenX/screenY to report 0 (common for maximized windows)
+                    Object.defineProperty(window, 'screenX', {
+                        get: function() { return 0; },
+                        configurable: true
+                    });
+
+                    Object.defineProperty(window, 'screenY', {
+                        get: function() { return 0; },
+                        configurable: true
+                    });
+
+                    Object.defineProperty(window, 'screenLeft', {
+                        get: function() { return 0; },
+                        configurable: true
+                    });
+
+                    Object.defineProperty(window, 'screenTop', {
+                        get: function() { return 0; },
+                        configurable: true
+                    });
+
+                    // Override devicePixelRatio to a common value
+                    Object.defineProperty(window, 'devicePixelRatio', {
+                        get: function() { return 1; },
+                        configurable: true
+                    });
+
+                    console.log('[Barc] Screen resolution spoofing enabled: ' + spoofedWidth + 'x' + spoofedHeight);
+                })();
+            """)
+        }
+
         // Clipboard access blocking
         if settings.clipboardAccessBlocking {
             scriptParts.append("""
