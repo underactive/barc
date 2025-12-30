@@ -1472,6 +1472,7 @@ struct WebView: NSViewRepresentable {
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             tab.isLoading = true
+            tab.isRendering = true  // Start rendering state for throbber animation
             networkMonitor.reportTransmit(tabId: tab.id)
             // Clear blocked requests for this tab when navigating to a new page
             blockedRequestsMonitor.clearBlocked(for: tab.id)
@@ -1487,6 +1488,7 @@ struct WebView: NSViewRepresentable {
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             tab.isLoading = false
+            tab.isRendering = false  // End rendering state
             tab.updateFromWebView(webView)
             networkMonitor.reportReceive(tabId: tab.id)
             fetchFavicon(for: webView)
@@ -1494,10 +1496,12 @@ struct WebView: NSViewRepresentable {
 
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
             tab.isLoading = false
+            tab.isRendering = false
         }
 
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
             tab.isLoading = false
+            tab.isRendering = false
         }
 
         // MARK: - WKUIDelegate

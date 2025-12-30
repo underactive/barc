@@ -7,6 +7,7 @@ class Tab: Identifiable, ObservableObject {
     @Published var url: URL?
     @Published var favicon: NSImage?
     @Published var isLoading: Bool = false
+    @Published var isRendering: Bool = false  // Tracks rendering phase (for cached pages)
     @Published var canGoBack: Bool = false
     @Published var canGoForward: Bool = false
     @Published var estimatedProgress: Double = 0

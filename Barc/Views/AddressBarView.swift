@@ -223,7 +223,9 @@ struct AddressBarView: View {
 
             // Netscape-style throbber
             if privacySettings.showLoadingThrobber {
-                NetscapeThrobberView(isLoading: browserState.selectedTab?.isLoading ?? false)
+                let isPageLoading = (browserState.selectedTab?.isLoading ?? false) || (browserState.selectedTab?.isRendering ?? false)
+                let hasNetworkActivity = browserState.selectedTabId.map { networkMonitor.transmittingTabIds.contains($0) || networkMonitor.receivingTabIds.contains($0) } ?? false
+                NetscapeThrobberView(isLoading: isPageLoading || hasNetworkActivity)
             }
         }
         .padding(.horizontal, 16)
