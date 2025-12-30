@@ -764,6 +764,39 @@ struct WebView: NSViewRepresentable {
             """)
         }
 
+        // Battery API blocking
+        if settings.batteryAPIBlocking {
+            scriptParts.append("""
+                // Block Battery Status API
+                (function() {
+                    if (navigator.getBattery) {
+                        navigator.getBattery = function() {
+                            console.log('[Barc] Blocked Battery API access');
+                            return Promise.reject(new DOMException('Battery API blocked by privacy settings', 'NotAllowedError'));
+                        };
+                    }
+
+                    // Also block the older battery property if it exists
+                    if ('battery' in navigator) {
+                        Object.defineProperty(navigator, 'battery', {
+                            get: function() {
+                                console.log('[Barc] Blocked navigator.battery access');
+                                return undefined;
+                            },
+                            configurable: true
+                        });
+                    }
+
+                    // Block BatteryManager if exposed
+                    if (window.BatteryManager) {
+                        delete window.BatteryManager;
+                    }
+
+                    console.log('[Barc] Battery API blocking enabled');
+                })();
+            """)
+        }
+
         // Clipboard access blocking
         if settings.clipboardAccessBlocking {
             scriptParts.append("""

@@ -183,6 +183,10 @@ class PrivacySettings: ObservableObject {
         didSet { objectWillChange.send() }
     }
 
+    @AppStorage("privacy.batteryAPIBlocking") var batteryAPIBlocking: Bool = true {
+        didSet { objectWillChange.send() }
+    }
+
     @AppStorage("privacy.trackingPixelBlocking") var trackingPixelBlocking: Bool = true {
         didSet { objectWillChange.send() }
     }
@@ -301,6 +305,7 @@ class PrivacySettings: ObservableObject {
         hardwareFingerprintResistance = true
         fontFingerprintProtection = true
         audioContextFingerprintProtection = true
+        batteryAPIBlocking = true
         trackingPixelBlocking = true
         popupBlocking = true
         thirdPartyCookieBlocking = true

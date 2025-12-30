@@ -362,6 +362,8 @@ struct PrivacySettingsView: View {
                     systemImage: "waveform",
                     isOn: $settings.audioContextFingerprintProtection
                 )
+
+                BatteryAPIBlockingRow(settings: settings)
             } header: {
                 Label("Fingerprinting Protection", systemImage: "hand.raised")
                     .font(.headline)
@@ -518,7 +520,7 @@ struct PrivacySettingsView: View {
         .padding()
     }
 
-    private var maxPrivacyScore: Int { 15 }
+    private var maxPrivacyScore: Int { 16 }
 
     private var privacyScore: Int {
         var score = 0
@@ -530,6 +532,7 @@ struct PrivacySettingsView: View {
         if settings.hardwareFingerprintResistance { score += 1 }
         if settings.fontFingerprintProtection { score += 1 }
         if settings.audioContextFingerprintProtection { score += 1 }
+        if settings.batteryAPIBlocking { score += 1 }
         if settings.trackingPixelBlocking { score += 1 }
         if settings.popupBlocking { score += 1 }
         if settings.thirdPartyCookieBlocking { score += 1 }
@@ -930,6 +933,83 @@ struct ClipboardBlockingRow: View {
             }
             .padding(12)
             .frame(width: 300)
+        }
+    }
+}
+
+struct BatteryAPIBlockingRow: View {
+    @ObservedObject var settings: PrivacySettings
+    @State private var showingInfo = false
+
+    var body: some View {
+        Toggle(isOn: $settings.batteryAPIBlocking) {
+            HStack(spacing: 12) {
+                Image(systemName: "battery.100")
+                    .font(.system(size: 16))
+                    .foregroundColor(settings.batteryAPIBlocking ? .accentColor : .secondary)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Battery API Blocking")
+                        .font(.system(size: 13, weight: .medium))
+                    HStack(spacing: 0) {
+                        Text("Block battery status API (fingerprinting vector). ")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                        Button("More info") {
+                            showingInfo = true
+                        }
+                        .font(.system(size: 11))
+                        .buttonStyle(.plain)
+                        .foregroundColor(.accentColor)
+                    }
+                }
+            }
+        }
+        .toggleStyle(.switch)
+        .padding(.vertical, 4)
+        .popover(isPresented: $showingInfo, arrowEdge: .trailing) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "battery.100")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("Why Block Battery API?")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                Text("Safari/WebKit already doesn't support the Battery API (it was removed from most browsers except Chrome due to privacy concerns), but this ensures it's explicitly blocked if ever re-enabled.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Divider()
+
+                HStack {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.red)
+                    Text("What's Blocked")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "navigator.getBattery()"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "navigator.battery"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "BatteryManager interface"
+                    )
+                }
+            }
+            .padding(12)
+            .frame(width: 320)
         }
     }
 }
