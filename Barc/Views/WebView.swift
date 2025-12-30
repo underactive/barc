@@ -608,6 +608,162 @@ struct WebView: NSViewRepresentable {
             """)
         }
 
+        // AudioContext fingerprint protection
+        if settings.audioContextFingerprintProtection {
+            scriptParts.append("""
+                // Spoof AudioContext fingerprinting
+                (function() {
+                    // Generate consistent but random-looking noise offset per session
+                    const noiseOffset = Math.random() * 0.0001;
+
+                    // Store original constructors
+                    const OriginalAudioContext = window.AudioContext || window.webkitAudioContext;
+                    const OriginalOfflineAudioContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+
+                    if (OriginalAudioContext) {
+                        // Wrap AudioContext
+                        const wrappedAudioContext = function(...args) {
+                            const context = new OriginalAudioContext(...args);
+
+                            // Override createOscillator to add slight variations
+                            const originalCreateOscillator = context.createOscillator.bind(context);
+                            context.createOscillator = function() {
+                                const oscillator = originalCreateOscillator();
+
+                                // Slightly modify the frequency detune to add noise
+                                const originalDetune = Object.getOwnPropertyDescriptor(OscillatorNode.prototype, 'detune');
+                                if (oscillator.detune && originalDetune) {
+                                    const originalDetuneValue = oscillator.detune.value;
+                                    Object.defineProperty(oscillator, 'detune', {
+                                        get: function() {
+                                            const detune = originalDetune.get.call(this);
+                                            // Add tiny noise to detune value reads
+                                            const originalValue = detune.value;
+                                            Object.defineProperty(detune, 'value', {
+                                                get: function() { return originalValue + noiseOffset; },
+                                                set: function(v) { return v; },
+                                                configurable: true
+                                            });
+                                            return detune;
+                                        },
+                                        configurable: true
+                                    });
+                                }
+                                return oscillator;
+                            };
+
+                            // Override createAnalyser to modify frequency data
+                            const originalCreateAnalyser = context.createAnalyser.bind(context);
+                            context.createAnalyser = function() {
+                                const analyser = originalCreateAnalyser();
+
+                                // Override getFloatFrequencyData
+                                const originalGetFloatFrequencyData = analyser.getFloatFrequencyData.bind(analyser);
+                                analyser.getFloatFrequencyData = function(array) {
+                                    originalGetFloatFrequencyData(array);
+                                    // Add small noise to each value
+                                    for (let i = 0; i < array.length; i++) {
+                                        array[i] += (noiseOffset * (i % 10)) - (noiseOffset * 5);
+                                    }
+                                };
+
+                                // Override getByteFrequencyData
+                                const originalGetByteFrequencyData = analyser.getByteFrequencyData.bind(analyser);
+                                analyser.getByteFrequencyData = function(array) {
+                                    originalGetByteFrequencyData(array);
+                                    // Add small noise to each value
+                                    for (let i = 0; i < array.length; i++) {
+                                        const noise = Math.floor((noiseOffset * 10000) % 3) - 1;
+                                        array[i] = Math.max(0, Math.min(255, array[i] + noise));
+                                    }
+                                };
+
+                                // Override getFloatTimeDomainData
+                                const originalGetFloatTimeDomainData = analyser.getFloatTimeDomainData.bind(analyser);
+                                analyser.getFloatTimeDomainData = function(array) {
+                                    originalGetFloatTimeDomainData(array);
+                                    for (let i = 0; i < array.length; i++) {
+                                        array[i] += noiseOffset * ((i % 7) - 3);
+                                    }
+                                };
+
+                                // Override getByteTimeDomainData
+                                const originalGetByteTimeDomainData = analyser.getByteTimeDomainData.bind(analyser);
+                                analyser.getByteTimeDomainData = function(array) {
+                                    originalGetByteTimeDomainData(array);
+                                    for (let i = 0; i < array.length; i++) {
+                                        const noise = Math.floor((noiseOffset * 10000) % 2);
+                                        array[i] = Math.max(0, Math.min(255, array[i] + noise));
+                                    }
+                                };
+
+                                return analyser;
+                            };
+
+                            // Spoof destination properties
+                            const originalDestination = context.destination;
+                            Object.defineProperty(context, 'destination', {
+                                get: function() {
+                                    return originalDestination;
+                                },
+                                configurable: true
+                            });
+
+                            // Spoof sampleRate with slight variation
+                            const originalSampleRate = context.sampleRate;
+                            Object.defineProperty(context, 'sampleRate', {
+                                get: function() {
+                                    // Return common sample rates to reduce uniqueness
+                                    return 44100;
+                                },
+                                configurable: true
+                            });
+
+                            return context;
+                        };
+
+                        wrappedAudioContext.prototype = OriginalAudioContext.prototype;
+                        window.AudioContext = wrappedAudioContext;
+                        if (window.webkitAudioContext) {
+                            window.webkitAudioContext = wrappedAudioContext;
+                        }
+                    }
+
+                    if (OriginalOfflineAudioContext) {
+                        // Wrap OfflineAudioContext
+                        const wrappedOfflineAudioContext = function(...args) {
+                            const context = new OriginalOfflineAudioContext(...args);
+
+                            // Override renderedBuffer to add noise
+                            const originalStartRendering = context.startRendering.bind(context);
+                            context.startRendering = function() {
+                                return originalStartRendering().then(function(buffer) {
+                                    // Add tiny noise to the rendered audio data
+                                    for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+                                        const channelData = buffer.getChannelData(channel);
+                                        for (let i = 0; i < channelData.length; i++) {
+                                            channelData[i] += noiseOffset * ((i % 13) - 6) * 0.00001;
+                                        }
+                                    }
+                                    return buffer;
+                                });
+                            };
+
+                            return context;
+                        };
+
+                        wrappedOfflineAudioContext.prototype = OriginalOfflineAudioContext.prototype;
+                        window.OfflineAudioContext = wrappedOfflineAudioContext;
+                        if (window.webkitOfflineAudioContext) {
+                            window.webkitOfflineAudioContext = wrappedOfflineAudioContext;
+                        }
+                    }
+
+                    console.log('[Barc] AudioContext fingerprint protection enabled');
+                })();
+            """)
+        }
+
         // Clipboard access blocking
         if settings.clipboardAccessBlocking {
             scriptParts.append("""

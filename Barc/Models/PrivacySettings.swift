@@ -179,6 +179,10 @@ class PrivacySettings: ObservableObject {
         didSet { objectWillChange.send() }
     }
 
+    @AppStorage("privacy.audioContextFingerprintProtection") var audioContextFingerprintProtection: Bool = true {
+        didSet { objectWillChange.send() }
+    }
+
     @AppStorage("privacy.trackingPixelBlocking") var trackingPixelBlocking: Bool = true {
         didSet { objectWillChange.send() }
     }
@@ -296,6 +300,7 @@ class PrivacySettings: ObservableObject {
         trackerBlocking = true
         hardwareFingerprintResistance = true
         fontFingerprintProtection = true
+        audioContextFingerprintProtection = true
         trackingPixelBlocking = true
         popupBlocking = true
         thirdPartyCookieBlocking = true

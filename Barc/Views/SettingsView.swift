@@ -355,6 +355,13 @@ struct PrivacySettingsView: View {
                     systemImage: "textformat",
                     isOn: $settings.fontFingerprintProtection
                 )
+
+                PrivacyToggleRow(
+                    title: "AudioContext Fingerprint Protection",
+                    description: "Spoof audio processing to prevent audio-based fingerprinting.",
+                    systemImage: "waveform",
+                    isOn: $settings.audioContextFingerprintProtection
+                )
             } header: {
                 Label("Fingerprinting Protection", systemImage: "hand.raised")
                     .font(.headline)
@@ -511,7 +518,7 @@ struct PrivacySettingsView: View {
         .padding()
     }
 
-    private var maxPrivacyScore: Int { 14 }
+    private var maxPrivacyScore: Int { 15 }
 
     private var privacyScore: Int {
         var score = 0
@@ -522,6 +529,7 @@ struct PrivacySettingsView: View {
         if settings.trackerBlocking { score += 1 }
         if settings.hardwareFingerprintResistance { score += 1 }
         if settings.fontFingerprintProtection { score += 1 }
+        if settings.audioContextFingerprintProtection { score += 1 }
         if settings.trackingPixelBlocking { score += 1 }
         if settings.popupBlocking { score += 1 }
         if settings.thirdPartyCookieBlocking { score += 1 }
