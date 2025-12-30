@@ -370,6 +370,8 @@ struct PrivacySettingsView: View {
                     isOn: $settings.thirdPartyCookieBlocking
                 )
 
+                CookieBannerRow(settings: settings)
+
                 // Custom Blocklist
                 CustomBlocklistView(settings: settings, newDomain: $newBlockedDomain)
             } header: {
@@ -493,7 +495,7 @@ struct PrivacySettingsView: View {
         .padding()
     }
 
-    private var maxPrivacyScore: Int { 10 }
+    private var maxPrivacyScore: Int { 11 }
 
     private var privacyScore: Int {
         var score = 0
@@ -505,6 +507,7 @@ struct PrivacySettingsView: View {
         if settings.trackingPixelBlocking { score += 1 }
         if settings.popupBlocking { score += 1 }
         if settings.thirdPartyCookieBlocking { score += 1 }
+        if settings.cookieBannerAutoReject { score += 1 }
         if settings.httpsOnlyMode != .off { score += 1 }
         if settings.referrerPolicy != .defaultPolicy { score += 1 }
         return score
@@ -729,6 +732,112 @@ struct TrackerBlockingRow: View {
                 .frame(maxHeight: 300)
             }
             .frame(width: 380)
+        }
+    }
+}
+
+struct CookieBannerRow: View {
+    @ObservedObject var settings: PrivacySettings
+    @State private var showingInfo = false
+
+    private let supportedProviders = [
+        "OneTrust", "Cookiebot", "Quantcast", "TrustArc", "Didomi",
+        "Klaro", "Complianz", "CookieYes", "Iubenda", "Borlabs Cookie"
+    ]
+
+    var body: some View {
+        Toggle(isOn: $settings.cookieBannerAutoReject) {
+            HStack(spacing: 12) {
+                Image(systemName: "xmark.rectangle")
+                    .font(.system(size: 16))
+                    .foregroundColor(settings.cookieBannerAutoReject ? .accentColor : .secondary)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Cookie Banner Auto-Reject")
+                        .font(.system(size: 13, weight: .medium))
+                    HStack(spacing: 0) {
+                        Text("Automatically dismiss cookie consent popups. ")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                        Button("More info") {
+                            showingInfo = true
+                        }
+                        .font(.system(size: 11))
+                        .buttonStyle(.plain)
+                        .foregroundColor(.accentColor)
+                    }
+                }
+            }
+        }
+        .toggleStyle(.switch)
+        .padding(.vertical, 4)
+        .popover(isPresented: $showingInfo, arrowEdge: .trailing) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "xmark.rectangle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("How It Works")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "eye",
+                        text: "Detects cookie consent banners from major providers"
+                    )
+                    InfoRow(
+                        icon: "cursorarrow.click.2",
+                        text: "Searches for reject/decline buttons using selectors and text patterns"
+                    )
+                    InfoRow(
+                        icon: "hand.tap",
+                        text: "Clicks the reject button automatically when detected"
+                    )
+                    InfoRow(
+                        icon: "arrow.triangle.2.circlepath",
+                        text: "Uses MutationObserver to handle dynamically loaded banners"
+                    )
+                    InfoRow(
+                        icon: "timer",
+                        text: "Disconnects observer after 10 seconds to save resources"
+                    )
+                }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Supported Providers")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.secondary)
+
+                    Text(supportedProviders.joined(separator: ", "))
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(12)
+            .frame(width: 300)
+        }
+    }
+}
+
+private struct InfoRow: View {
+    let icon: String
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 10))
+                .foregroundColor(.accentColor)
+                .frame(width: 14)
+            Text(text)
+                .font(.system(size: 11))
+                .foregroundColor(.primary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

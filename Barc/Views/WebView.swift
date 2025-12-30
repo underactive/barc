@@ -391,6 +391,182 @@ struct WebView: NSViewRepresentable {
             """)
         }
 
+        // Cookie Banner Auto-Reject
+        if settings.cookieBannerAutoReject {
+            scriptParts.append("""
+                // Cookie Banner Auto-Reject
+                (function() {
+                    if (window.__barcCookieBannerHandled) return;
+                    window.__barcCookieBannerHandled = true;
+
+                    const rejectSelectors = [
+                        // OneTrust
+                        '#onetrust-reject-all-handler',
+                        '.onetrust-close-btn-handler',
+                        '#onetrust-pc-btn-handler',
+                        // Cookiebot
+                        '#CybotCookiebotDialogBodyButtonDecline',
+                        '#CybotCookiebotDialogBodyLevelButtonLevelOptinDeclineAll',
+                        // Quantcast
+                        '.qc-cmp2-summary-buttons button[mode="secondary"]',
+                        '.qc-cmp-button[onclick*="reject"]',
+                        // TrustArc / TrustE
+                        '.trustarc-agree-btn',
+                        '#truste-consent-required',
+                        // Didomi
+                        '#didomi-notice-disagree-button',
+                        '.didomi-continue-without-agreeing',
+                        // Axeptio
+                        '[data-consent="deny"]',
+                        // Klaro
+                        '.cm-btn-decline',
+                        '.klaro .cn-decline',
+                        // Complianz
+                        '.cmplz-deny',
+                        // CookieYes
+                        '.cky-btn-reject',
+                        // Iubenda
+                        '.iubenda-cs-reject-btn',
+                        // GDPR Cookie Compliance
+                        '.moove-gdpr-infobar-reject-btn',
+                        // Borlabs Cookie
+                        '[data-cookie-refuse]',
+                        // Generic patterns
+                        '[aria-label*="reject" i]',
+                        '[aria-label*="decline" i]',
+                        '[aria-label*="deny" i]',
+                        'button[data-testid*="reject" i]',
+                        'button[data-testid*="decline" i]'
+                    ];
+
+                    const rejectTextPatterns = [
+                        /^reject\\s*(all)?$/i,
+                        /^decline\\s*(all)?$/i,
+                        /^deny\\s*(all)?$/i,
+                        /^refuse\\s*(all)?$/i,
+                        /^only\\s*(essential|necessary|required)/i,
+                        /^necessary\\s*only$/i,
+                        /^essential\\s*only$/i,
+                        /^use\\s*necessary\\s*(cookies)?\\s*only$/i,
+                        /^accept\\s*necessary$/i,
+                        /^no,?\\s*thanks?$/i,
+                        /^disagree$/i,
+                        /^opt[\\s-]*out$/i
+                    ];
+
+                    const bannerSelectors = [
+                        '#onetrust-banner-sdk',
+                        '#CybotCookiebotDialog',
+                        '.qc-cmp2-container',
+                        '#truste-consent-track',
+                        '#didomi-host',
+                        '.klaro',
+                        '.cmplz-cookiebanner',
+                        '.cky-consent-container',
+                        '#iubenda-cs-banner',
+                        '.moove-gdpr-info-bar-container',
+                        '[class*="cookie-banner"]',
+                        '[class*="cookie-consent"]',
+                        '[class*="cookie-notice"]',
+                        '[class*="gdpr-banner"]',
+                        '[id*="cookie-banner"]',
+                        '[id*="cookie-consent"]',
+                        '[id*="cookie-notice"]',
+                        '[id*="gdpr-banner"]'
+                    ];
+
+                    function findRejectButton() {
+                        // Try specific selectors first
+                        for (const selector of rejectSelectors) {
+                            try {
+                                const el = document.querySelector(selector);
+                                if (el && isVisible(el)) {
+                                    return el;
+                                }
+                            } catch(e) {}
+                        }
+
+                        // Search for buttons with reject text
+                        const buttons = document.querySelectorAll('button, a[role="button"], [class*="btn"], [class*="button"]');
+                        for (const btn of buttons) {
+                            const text = (btn.textContent || btn.innerText || '').trim();
+                            if (text.length > 0 && text.length < 50) {
+                                for (const pattern of rejectTextPatterns) {
+                                    if (pattern.test(text) && isVisible(btn)) {
+                                        return btn;
+                                    }
+                                }
+                            }
+                        }
+                        return null;
+                    }
+
+                    function isVisible(el) {
+                        if (!el) return false;
+                        const style = window.getComputedStyle(el);
+                        return style.display !== 'none' &&
+                               style.visibility !== 'hidden' &&
+                               style.opacity !== '0' &&
+                               el.offsetParent !== null;
+                    }
+
+                    function isBannerVisible() {
+                        for (const selector of bannerSelectors) {
+                            try {
+                                const el = document.querySelector(selector);
+                                if (el && isVisible(el)) {
+                                    return true;
+                                }
+                            } catch(e) {}
+                        }
+                        return false;
+                    }
+
+                    function tryReject() {
+                        if (!isBannerVisible()) return false;
+
+                        const btn = findRejectButton();
+                        if (btn) {
+                            console.log('[Barc] Auto-rejecting cookie banner');
+                            btn.click();
+                            return true;
+                        }
+                        return false;
+                    }
+
+                    // Try immediately
+                    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+                        setTimeout(tryReject, 100);
+                    }
+
+                    // Try on DOMContentLoaded
+                    document.addEventListener('DOMContentLoaded', () => {
+                        setTimeout(tryReject, 100);
+                        setTimeout(tryReject, 500);
+                        setTimeout(tryReject, 1500);
+                    });
+
+                    // Watch for dynamically added banners
+                    const observer = new MutationObserver((mutations) => {
+                        if (isBannerVisible()) {
+                            setTimeout(tryReject, 100);
+                        }
+                    });
+
+                    if (document.body) {
+                        observer.observe(document.body, { childList: true, subtree: true });
+                    } else {
+                        document.addEventListener('DOMContentLoaded', () => {
+                            observer.observe(document.body, { childList: true, subtree: true });
+                        });
+                    }
+
+                    // Stop observing after 10 seconds to save resources
+                    setTimeout(() => observer.disconnect(), 10000);
+                })();
+            """)
+        }
+
         scriptParts.append("})();")
 
         let fullScript = scriptParts.joined(separator: "\n")
