@@ -348,6 +348,13 @@ struct PrivacySettingsView: View {
                     systemImage: "cpu",
                     isOn: $settings.hardwareFingerprintResistance
                 )
+
+                PrivacyToggleRow(
+                    title: "Font Fingerprint Protection",
+                    description: "Limit detectable fonts to a common subset to prevent identification.",
+                    systemImage: "textformat",
+                    isOn: $settings.fontFingerprintProtection
+                )
             } header: {
                 Label("Fingerprinting Protection", systemImage: "hand.raised")
                     .font(.headline)
@@ -504,7 +511,7 @@ struct PrivacySettingsView: View {
         .padding()
     }
 
-    private var maxPrivacyScore: Int { 13 }
+    private var maxPrivacyScore: Int { 14 }
 
     private var privacyScore: Int {
         var score = 0
@@ -514,6 +521,7 @@ struct PrivacySettingsView: View {
         if settings.webRTCProtection { score += 1 }
         if settings.trackerBlocking { score += 1 }
         if settings.hardwareFingerprintResistance { score += 1 }
+        if settings.fontFingerprintProtection { score += 1 }
         if settings.trackingPixelBlocking { score += 1 }
         if settings.popupBlocking { score += 1 }
         if settings.thirdPartyCookieBlocking { score += 1 }

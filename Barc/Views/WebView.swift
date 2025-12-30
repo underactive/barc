@@ -460,6 +460,154 @@ struct WebView: NSViewRepresentable {
             """)
         }
 
+        // Font fingerprint protection
+        if settings.fontFingerprintProtection {
+            scriptParts.append("""
+                // Limit detectable fonts to a common subset
+                (function() {
+                    // Common fonts available on most systems (minimal set for privacy)
+                    const allowedFonts = new Set([
+                        // Web-safe fonts
+                        'arial', 'arial black', 'comic sans ms', 'courier new', 'georgia',
+                        'impact', 'times new roman', 'trebuchet ms', 'verdana',
+                        'helvetica', 'helvetica neue', 'lucida grande', 'tahoma',
+                        // Generic families
+                        'system-ui', 'sans-serif', 'serif', 'monospace', 'cursive', 'fantasy',
+                        '-apple-system', 'blinkmacsystemfont', 'segoe ui'
+                    ]);
+
+                    const isAllowedFont = (fontFamily) => {
+                        if (!fontFamily) return true;
+                        const normalized = fontFamily.toLowerCase().trim().replace(/['"]/g, '');
+                        return allowedFonts.has(normalized) ||
+                               normalized.startsWith('system') ||
+                               normalized === 'sans-serif' ||
+                               normalized === 'serif' ||
+                               normalized === 'monospace';
+                    };
+
+                    // Store baseline dimensions for fallback
+                    const baselineWidth = 72.5;
+                    const baselineHeight = 18;
+
+                    // Override FontFaceSet.check
+                    if (document.fonts && document.fonts.check) {
+                        const originalCheck = document.fonts.check.bind(document.fonts);
+                        document.fonts.check = function(font, text) {
+                            const fontFamily = font.split(/\\s+/).pop().replace(/['"]/g, '');
+                            if (!isAllowedFont(fontFamily)) {
+                                return false;
+                            }
+                            return originalCheck(font, text);
+                        };
+                    }
+
+                    // Track elements being used for font detection
+                    const fontProbeElements = new WeakSet();
+
+                    // Intercept createElement to catch font probe elements
+                    const originalCreateElement = document.createElement.bind(document);
+                    document.createElement = function(tagName, options) {
+                        const element = originalCreateElement(tagName, options);
+                        if (tagName.toLowerCase() === 'span') {
+                            // Mark potential font probe elements
+                            setTimeout(() => {
+                                if (element.style.fontFamily && !element.textContent?.trim()) {
+                                    fontProbeElements.add(element);
+                                }
+                            }, 0);
+                        }
+                        return element;
+                    };
+
+                    // Override offsetWidth
+                    const originalOffsetWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
+                    Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
+                        get: function() {
+                            const value = originalOffsetWidth.get.call(this);
+                            if (this.style.fontFamily) {
+                                const fontFamily = this.style.fontFamily.split(',')[0];
+                                if (!isAllowedFont(fontFamily)) {
+                                    return baselineWidth;
+                                }
+                            }
+                            return value;
+                        },
+                        configurable: true
+                    });
+
+                    // Override offsetHeight
+                    const originalOffsetHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight');
+                    Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
+                        get: function() {
+                            const value = originalOffsetHeight.get.call(this);
+                            if (this.style.fontFamily) {
+                                const fontFamily = this.style.fontFamily.split(',')[0];
+                                if (!isAllowedFont(fontFamily)) {
+                                    return baselineHeight;
+                                }
+                            }
+                            return value;
+                        },
+                        configurable: true
+                    });
+
+                    // Override getBoundingClientRect
+                    const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
+                    Element.prototype.getBoundingClientRect = function() {
+                        const rect = originalGetBoundingClientRect.call(this);
+                        if (this.style && this.style.fontFamily) {
+                            const fontFamily = this.style.fontFamily.split(',')[0];
+                            if (!isAllowedFont(fontFamily)) {
+                                return new DOMRect(rect.x, rect.y, baselineWidth, baselineHeight);
+                            }
+                        }
+                        return rect;
+                    };
+
+                    // Override getComputedStyle to hide non-allowed fonts
+                    const originalGetComputedStyle = window.getComputedStyle;
+                    window.getComputedStyle = function(element, pseudoElt) {
+                        const style = originalGetComputedStyle.call(this, element, pseudoElt);
+                        const originalGetPropertyValue = style.getPropertyValue.bind(style);
+                        style.getPropertyValue = function(prop) {
+                            if (prop === 'font-family') {
+                                const value = originalGetPropertyValue(prop);
+                                const fonts = value.split(',').filter(f => isAllowedFont(f.trim()));
+                                return fonts.length > 0 ? fonts.join(', ') : 'sans-serif';
+                            }
+                            return originalGetPropertyValue(prop);
+                        };
+                        return style;
+                    };
+
+                    // Block canvas-based font detection by adding noise when measuring text
+                    const originalMeasureText = CanvasRenderingContext2D.prototype.measureText;
+                    CanvasRenderingContext2D.prototype.measureText = function(text) {
+                        const metrics = originalMeasureText.call(this, text);
+                        const font = this.font || '';
+                        const fontFamily = font.split(/\\s+/).pop()?.replace(/['"]/g, '') || '';
+
+                        if (!isAllowedFont(fontFamily)) {
+                            // Return consistent baseline metrics for non-allowed fonts
+                            return {
+                                width: text.length * 8,
+                                actualBoundingBoxAscent: metrics.actualBoundingBoxAscent,
+                                actualBoundingBoxDescent: metrics.actualBoundingBoxDescent,
+                                actualBoundingBoxLeft: metrics.actualBoundingBoxLeft,
+                                actualBoundingBoxRight: text.length * 8,
+                                fontBoundingBoxAscent: metrics.fontBoundingBoxAscent,
+                                fontBoundingBoxDescent: metrics.fontBoundingBoxDescent
+                            };
+                        }
+                        return metrics;
+                    };
+
+                    console.log('[Barc] Font fingerprint protection enabled (enhanced)');
+                })();
+            """)
+        }
+
         // Clipboard access blocking
         if settings.clipboardAccessBlocking {
             scriptParts.append("""
