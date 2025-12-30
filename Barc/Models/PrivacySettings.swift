@@ -243,6 +243,12 @@ class PrivacySettings: ObservableObject {
         didSet { objectWillChange.send() }
     }
 
+    // MARK: - UI Preferences
+
+    @AppStorage("privacy.suppressFingerprintWarning") var suppressFingerprintWarning: Bool = false {
+        didSet { objectWillChange.send() }
+    }
+
     // MARK: - General Settings
 
     @AppStorage("general.searchEngine") var searchEngine: SearchEngine = .kagi {

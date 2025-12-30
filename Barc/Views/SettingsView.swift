@@ -307,6 +307,8 @@ struct PrivacySettingsView: View {
     @State private var newWhitelistDomain: String = ""
     @State private var newBlockedDomain: String = ""
     @State private var showingClearDataConfirmation = false
+    @State private var showingFingerprintWarning = false
+    @State private var dontShowAgainChecked = false
 
     var body: some View {
         Form {
@@ -320,56 +322,67 @@ struct PrivacySettingsView: View {
 
                 // Storage Whitelist
                 StorageWhitelistView(settings: settings, newDomain: $newWhitelistDomain)
+            } header: {
+                Label("Storage", systemImage: "internaldrive")
+                    .font(.headline)
+            }
 
-                PrivacyToggleRow(
+            Section {
+                FingerprintToggleRow(
                     title: "Canvas Fingerprint Protection",
                     description: "Add subtle noise to canvas data to prevent unique browser identification.",
                     systemImage: "hand.raised.fingers.spread",
-                    isOn: $settings.canvasFingerprintProtection
+                    isOn: $settings.canvasFingerprintProtection,
+                    showWarning: showFingerprintWarningIfNeeded
                 )
 
-                PrivacyToggleRow(
+                FingerprintToggleRow(
                     title: "WebGL Fingerprint Protection",
                     description: "Mask WebGL renderer and vendor info used for browser identification.",
                     systemImage: "cube.transparent",
-                    isOn: $settings.webGLFingerprintProtection
+                    isOn: $settings.webGLFingerprintProtection,
+                    showWarning: showFingerprintWarningIfNeeded
                 )
 
-                PrivacyToggleRow(
+                FingerprintToggleRow(
                     title: "WebRTC IP Leak Protection",
                     description: "Prevent websites from discovering your real IP address through WebRTC.",
                     systemImage: "network.slash",
-                    isOn: $settings.webRTCProtection
+                    isOn: $settings.webRTCProtection,
+                    showWarning: showFingerprintWarningIfNeeded
                 )
 
-                PrivacyToggleRow(
+                FingerprintToggleRow(
                     title: "Hardware Fingerprint Resistance",
                     description: "Spoof hardware info (CPU cores, memory) to reduce fingerprinting accuracy.",
                     systemImage: "cpu",
-                    isOn: $settings.hardwareFingerprintResistance
+                    isOn: $settings.hardwareFingerprintResistance,
+                    showWarning: showFingerprintWarningIfNeeded
                 )
 
-                PrivacyToggleRow(
+                FingerprintToggleRow(
                     title: "Font Fingerprint Protection",
                     description: "Limit detectable fonts to a common subset to prevent identification.",
                     systemImage: "textformat",
-                    isOn: $settings.fontFingerprintProtection
+                    isOn: $settings.fontFingerprintProtection,
+                    showWarning: showFingerprintWarningIfNeeded
                 )
 
-                PrivacyToggleRow(
+                FingerprintToggleRow(
                     title: "AudioContext Fingerprint Protection",
                     description: "Spoof audio processing to prevent audio-based fingerprinting.",
                     systemImage: "waveform",
-                    isOn: $settings.audioContextFingerprintProtection
+                    isOn: $settings.audioContextFingerprintProtection,
+                    showWarning: showFingerprintWarningIfNeeded
                 )
 
-                BatteryAPIBlockingRow(settings: settings)
+                BatteryAPIBlockingRow(settings: settings, showWarning: showFingerprintWarningIfNeeded)
 
-                LanguageSpoofingRow(settings: settings)
+                LanguageSpoofingRow(settings: settings, showWarning: showFingerprintWarningIfNeeded)
 
-                TimezoneSpoofingRow(settings: settings)
+                TimezoneSpoofingRow(settings: settings, showWarning: showFingerprintWarningIfNeeded)
 
-                ScreenResolutionSpoofingRow(settings: settings)
+                ScreenResolutionSpoofingRow(settings: settings, showWarning: showFingerprintWarningIfNeeded)
             } header: {
                 Label("Fingerprinting Protection", systemImage: "hand.raised")
                     .font(.headline)
@@ -524,6 +537,24 @@ struct PrivacySettingsView: View {
         .formStyle(.grouped)
         .environment(\.layoutDirection, .leftToRight)
         .padding()
+        .sheet(isPresented: $showingFingerprintWarning) {
+            FingerprintWarningDialog(
+                isPresented: $showingFingerprintWarning,
+                dontShowAgain: $dontShowAgainChecked,
+                onDismiss: {
+                    if dontShowAgainChecked {
+                        settings.suppressFingerprintWarning = true
+                    }
+                    dontShowAgainChecked = false
+                }
+            )
+        }
+    }
+
+    func showFingerprintWarningIfNeeded() {
+        if !settings.suppressFingerprintWarning {
+            showingFingerprintWarning = true
+        }
     }
 
     private var maxPrivacyScore: Int { 19 }
@@ -567,6 +598,65 @@ struct PrivacySettingsView: View {
 }
 
 // MARK: - Components
+
+struct FingerprintWarningDialog: View {
+    @Binding var isPresented: Bool
+    @Binding var dontShowAgain: Bool
+    var onDismiss: () -> Void
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "hand.raised.fill")
+                .font(.system(size: 32))
+                .foregroundColor(.accentColor)
+
+            Text("Fingerprinting Protection")
+                .font(.headline)
+
+            Text("This setting will take effect for new tabs. Existing tabs will continue using the previous setting until reloaded.")
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Toggle("Don't show this again", isOn: $dontShowAgain)
+                .toggleStyle(.checkbox)
+                .font(.system(size: 12))
+
+            Button("OK") {
+                onDismiss()
+                isPresented = false
+            }
+            .keyboardShortcut(.defaultAction)
+            .buttonStyle(.borderedProminent)
+        }
+        .padding(24)
+        .frame(width: 320)
+    }
+}
+
+struct FingerprintToggleRow: View {
+    let title: String
+    let description: String
+    let systemImage: String
+    @Binding var isOn: Bool
+    var showWarning: () -> Void
+
+    var body: some View {
+        PrivacyToggleRow(
+            title: title,
+            description: description,
+            systemImage: systemImage,
+            isOn: Binding(
+                get: { isOn },
+                set: { newValue in
+                    isOn = newValue
+                    showWarning()
+                }
+            )
+        )
+    }
+}
 
 struct StorageWhitelistView: View {
     @ObservedObject var settings: PrivacySettings
@@ -948,10 +1038,17 @@ struct ClipboardBlockingRow: View {
 
 struct BatteryAPIBlockingRow: View {
     @ObservedObject var settings: PrivacySettings
+    var showWarning: () -> Void
     @State private var showingInfo = false
 
     var body: some View {
-        Toggle(isOn: $settings.batteryAPIBlocking) {
+        Toggle(isOn: Binding(
+            get: { settings.batteryAPIBlocking },
+            set: { newValue in
+                settings.batteryAPIBlocking = newValue
+                showWarning()
+            }
+        )) {
             HStack(spacing: 12) {
                 Image(systemName: "battery.100")
                     .font(.system(size: 16))
@@ -1025,6 +1122,7 @@ struct BatteryAPIBlockingRow: View {
 
 struct LanguageSpoofingRow: View {
     @ObservedObject var settings: PrivacySettings
+    var showWarning: () -> Void
     @State private var showingInfo = false
 
     private var systemLanguage: String {
@@ -1033,7 +1131,13 @@ struct LanguageSpoofingRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Toggle(isOn: $settings.languageSpoofing) {
+            Toggle(isOn: Binding(
+                get: { settings.languageSpoofing },
+                set: { newValue in
+                    settings.languageSpoofing = newValue
+                    showWarning()
+                }
+            )) {
                 HStack(spacing: 12) {
                     Image(systemName: "globe")
                         .font(.system(size: 16))
@@ -1148,6 +1252,7 @@ struct LanguageSpoofingRow: View {
 
 struct TimezoneSpoofingRow: View {
     @ObservedObject var settings: PrivacySettings
+    var showWarning: () -> Void
     @State private var showingInfo = false
 
     private var systemTimezone: String {
@@ -1156,7 +1261,13 @@ struct TimezoneSpoofingRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Toggle(isOn: $settings.timezoneSpoofing) {
+            Toggle(isOn: Binding(
+                get: { settings.timezoneSpoofing },
+                set: { newValue in
+                    settings.timezoneSpoofing = newValue
+                    showWarning()
+                }
+            )) {
                 HStack(spacing: 12) {
                     Image(systemName: "clock")
                         .font(.system(size: 16))
@@ -1267,6 +1378,7 @@ struct TimezoneSpoofingRow: View {
 
 struct ScreenResolutionSpoofingRow: View {
     @ObservedObject var settings: PrivacySettings
+    var showWarning: () -> Void
     @State private var showingInfo = false
 
     private var systemResolution: String {
@@ -1279,7 +1391,13 @@ struct ScreenResolutionSpoofingRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Toggle(isOn: $settings.screenResolutionSpoofing) {
+            Toggle(isOn: Binding(
+                get: { settings.screenResolutionSpoofing },
+                set: { newValue in
+                    settings.screenResolutionSpoofing = newValue
+                    showWarning()
+                }
+            )) {
                 HStack(spacing: 12) {
                     Image(systemName: "display")
                         .font(.system(size: 16))
