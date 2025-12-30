@@ -267,6 +267,10 @@ class PrivacySettings: ObservableObject {
         didSet { objectWillChange.send() }
     }
 
+    @AppStorage("general.showLoadingThrobber") var showLoadingThrobber: Bool = true {
+        didSet { objectWillChange.send() }
+    }
+
     // MARK: - Blocked Domains
 
     /// Built-in tracker domains with descriptions (single source of truth)

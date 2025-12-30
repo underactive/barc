@@ -220,6 +220,11 @@ struct AddressBarView: View {
                     soundManager: soundManager
                 )
             }
+
+            // Netscape-style throbber
+            if privacySettings.showLoadingThrobber {
+                NetscapeThrobberView(isLoading: browserState.selectedTab?.isLoading ?? false)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
@@ -511,6 +516,245 @@ struct NetworkIndicatorsMenu: View {
             .padding(12)
             .fixedSize()
         }
+    }
+}
+
+// MARK: - Netscape-style Throbber
+
+struct NetscapeThrobberView: View {
+    let isLoading: Bool
+
+    // Star positions (x, y as percentages of container)
+    private let starPositions: [(x: CGFloat, y: CGFloat, size: CGFloat)] = [
+        (0.15, 0.12, 1.5), (0.85, 0.08, 2.0), (0.25, 0.35, 1.0),
+        (0.75, 0.25, 1.5), (0.10, 0.55, 1.0), (0.90, 0.45, 1.5),
+        (0.30, 0.75, 2.0), (0.70, 0.85, 1.0), (0.50, 0.15, 1.5),
+        (0.20, 0.90, 1.0), (0.80, 0.70, 1.5), (0.45, 0.60, 1.0),
+        (0.60, 0.40, 1.0), (0.35, 0.20, 1.5), (0.65, 0.95, 1.0),
+    ]
+
+    // Meteor animation state
+    @State private var meteorOffset: CGFloat = -0.3
+    @State private var meteor2Offset: CGFloat = -0.5
+    @State private var meteor3Offset: CGFloat = -0.7
+    @State private var starTwinkle: [Bool] = Array(repeating: false, count: 15)
+    @State private var isAnimating: Bool = false
+
+    var body: some View {
+        ZStack {
+            // Dark space background
+            RoundedRectangle(cornerRadius: 4)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.05, green: 0.05, blue: 0.15),
+                            Color(red: 0.0, green: 0.0, blue: 0.08)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            // Stars
+            GeometryReader { geo in
+                ForEach(0..<starPositions.count, id: \.self) { i in
+                    let star = starPositions[i]
+                    Circle()
+                        .fill(Color.white)
+                        .frame(width: star.size, height: star.size)
+                        .opacity(starTwinkle[i] ? 1.0 : 0.4)
+                        .position(
+                            x: geo.size.width * star.x,
+                            y: geo.size.height * star.y
+                        )
+                }
+            }
+
+            // Meteors (only visible when loading)
+            if isLoading {
+                GeometryReader { geo in
+                    // Main meteor
+                    MeteorView()
+                        .frame(width: 12, height: 3)
+                        .position(
+                            x: geo.size.width * meteorOffset,
+                            y: geo.size.height * (0.3 + meteorOffset * 0.4)
+                        )
+
+                    // Second meteor (smaller, different path)
+                    MeteorView()
+                        .frame(width: 8, height: 2)
+                        .opacity(0.7)
+                        .position(
+                            x: geo.size.width * meteor2Offset,
+                            y: geo.size.height * (0.6 + meteor2Offset * 0.3)
+                        )
+
+                    // Third meteor
+                    MeteorView()
+                        .frame(width: 6, height: 2)
+                        .opacity(0.5)
+                        .position(
+                            x: geo.size.width * meteor3Offset,
+                            y: geo.size.height * (0.15 + meteor3Offset * 0.5)
+                        )
+                }
+            }
+
+            // The "B" letter
+            Text("B")
+                .font(.system(size: 16, weight: .bold, design: .serif))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.7, green: 0.85, blue: 0.95),
+                            Color(red: 0.5, green: 0.7, blue: 0.85),
+                            Color(red: 0.3, green: 0.5, blue: 0.7)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .shadow(color: Color.cyan.opacity(0.5), radius: 2, x: 0, y: 0)
+                .shadow(color: Color.black, radius: 1, x: 1, y: 1)
+        }
+        .frame(width: 28, height: 28)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .strokeBorder(Color.gray.opacity(0.3), lineWidth: 0.5)
+        )
+        .onChange(of: isLoading) { _, newValue in
+            isAnimating = newValue
+            if newValue {
+                startMeteorAnimation()
+                startTwinkleAnimation()
+            } else {
+                stopAnimations()
+            }
+        }
+        .onAppear {
+            // Only start animations if already loading when view appears
+            if isLoading {
+                isAnimating = true
+                startMeteorAnimation()
+                startTwinkleAnimation()
+            }
+        }
+        .help(isLoading ? "Loading..." : "Click to reload")
+    }
+
+    private func startMeteorAnimation() {
+        // Reset positions
+        meteorOffset = -0.3
+        meteor2Offset = -0.5
+        meteor3Offset = -0.7
+
+        // Animate meteors continuously
+        animateMeteor1()
+        animateMeteor2()
+        animateMeteor3()
+    }
+
+    private func animateMeteor1() {
+        withAnimation(.linear(duration: 0.8)) {
+            meteorOffset = 1.3
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [self] in
+            if isAnimating {
+                meteorOffset = -0.3
+                animateMeteor1()
+            }
+        }
+    }
+
+    private func animateMeteor2() {
+        withAnimation(.linear(duration: 1.0)) {
+            meteor2Offset = 1.3
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [self] in
+            if isAnimating {
+                meteor2Offset = -0.3
+                animateMeteor2()
+            }
+        }
+    }
+
+    private func animateMeteor3() {
+        withAnimation(.linear(duration: 1.2)) {
+            meteor3Offset = 1.3
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [self] in
+            if isAnimating {
+                meteor3Offset = -0.3
+                animateMeteor3()
+            }
+        }
+    }
+
+    private func startTwinkleAnimation() {
+        // Randomly twinkle stars
+        twinkleRandomStars()
+    }
+
+    private func twinkleRandomStars() {
+        guard isAnimating else { return }
+
+        // Pick random stars to twinkle
+        for i in 0..<starPositions.count {
+            if Bool.random() {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    starTwinkle[i] = true
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [self] in
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        starTwinkle[i] = false
+                    }
+                }
+            }
+        }
+
+        // Continue twinkling
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [self] in
+            twinkleRandomStars()
+        }
+    }
+
+    private func stopAnimations() {
+        // Stop animation loops
+        isAnimating = false
+        // Reset to default state
+        withAnimation(.easeOut(duration: 0.3)) {
+            for i in 0..<starTwinkle.count {
+                starTwinkle[i] = false
+            }
+        }
+    }
+}
+
+// Meteor/shooting star shape
+struct MeteorView: View {
+    var body: some View {
+        GeometryReader { geo in
+            Path { path in
+                path.move(to: CGPoint(x: 0, y: geo.size.height / 2))
+                path.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height / 2))
+            }
+            .stroke(
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(0),
+                        Color.white.opacity(0.3),
+                        Color.white.opacity(0.8),
+                        Color.white
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                ),
+                style: StrokeStyle(lineWidth: geo.size.height, lineCap: .round)
+            )
+        }
+        .rotationEffect(.degrees(35))
     }
 }
 

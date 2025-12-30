@@ -191,6 +191,17 @@ struct GeneralSettingsView: View {
                             .font(.system(size: 13))
                     }
                     .toggleStyle(.switch)
+
+                    Toggle(isOn: $settings.showLoadingThrobber) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Show loading throbber")
+                                .font(.system(size: 13))
+                            Text("Display a retro animated throbber while pages load.")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .toggleStyle(.switch)
                 }
                 .padding(.leading, 12)
 
