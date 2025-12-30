@@ -366,6 +366,8 @@ struct PrivacySettingsView: View {
                 BatteryAPIBlockingRow(settings: settings)
 
                 LanguageSpoofingRow(settings: settings)
+
+                TimezoneSpoofingRow(settings: settings)
             } header: {
                 Label("Fingerprinting Protection", systemImage: "hand.raised")
                     .font(.headline)
@@ -522,7 +524,7 @@ struct PrivacySettingsView: View {
         .padding()
     }
 
-    private var maxPrivacyScore: Int { 17 }
+    private var maxPrivacyScore: Int { 18 }
 
     private var privacyScore: Int {
         var score = 0
@@ -536,6 +538,7 @@ struct PrivacySettingsView: View {
         if settings.audioContextFingerprintProtection { score += 1 }
         if settings.batteryAPIBlocking { score += 1 }
         if settings.languageSpoofing { score += 1 }
+        if settings.timezoneSpoofing { score += 1 }
         if settings.trackingPixelBlocking { score += 1 }
         if settings.popupBlocking { score += 1 }
         if settings.thirdPartyCookieBlocking { score += 1 }
@@ -1129,6 +1132,125 @@ struct LanguageSpoofingRow: View {
                         .foregroundColor(.secondary)
 
                     Text("Automatically picks a language different from your system language. If your system is en-US, it uses en-GB; otherwise it uses en-US.")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(12)
+            .frame(width: 300)
+        }
+    }
+}
+
+struct TimezoneSpoofingRow: View {
+    @ObservedObject var settings: PrivacySettings
+    @State private var showingInfo = false
+
+    private var systemTimezone: String {
+        TimeZone.current.identifier
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle(isOn: $settings.timezoneSpoofing) {
+                HStack(spacing: 12) {
+                    Image(systemName: "clock")
+                        .font(.system(size: 16))
+                        .foregroundColor(settings.timezoneSpoofing ? .accentColor : .secondary)
+                        .frame(width: 24)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Timezone Spoofing")
+                            .font(.system(size: 13, weight: .medium))
+                        HStack(spacing: 0) {
+                            Text("Report a common timezone to reduce fingerprinting. ")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                            Button("More info") {
+                                showingInfo = true
+                            }
+                            .font(.system(size: 11))
+                            .buttonStyle(.plain)
+                            .foregroundColor(.accentColor)
+                        }
+                    }
+                }
+            }
+            .toggleStyle(.switch)
+
+            // Timezone picker
+            HStack {
+                Text("Spoofed Timezone:")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+
+                Picker("", selection: $settings.spoofedTimezone) {
+                    ForEach(SpoofedTimezone.allCases) { tz in
+                        Text(tz.displayName).tag(tz)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(maxWidth: 250)
+            }
+            .padding(.leading, 36)
+            .disabled(!settings.timezoneSpoofing)
+            .opacity(settings.timezoneSpoofing ? 1.0 : 0.5)
+
+            Text("System timezone: \(systemTimezone)")
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
+                .padding(.leading, 36)
+        }
+        .padding(.vertical, 4)
+        .popover(isPresented: $showingInfo, arrowEdge: .trailing) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "clock")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("How It Works")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                Text("Your timezone can be used to narrow down your location and as part of a fingerprint. This feature reports a different timezone to make you blend in with more users.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Divider()
+
+                HStack {
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("What's Spoofed")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "Date.getTimezoneOffset()"
+                    )
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "Intl.DateTimeFormat timezone"
+                    )
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "Date.toLocaleString() methods"
+                    )
+                }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Auto Mode")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.secondary)
+
+                    Text("Automatically picks a timezone different from your system timezone. If your system is America/New_York, it uses Europe/London; otherwise it uses America/New_York.")
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)

@@ -861,6 +861,100 @@ struct WebView: NSViewRepresentable {
             """)
         }
 
+        // Timezone spoofing
+        if settings.timezoneSpoofing {
+            let systemTimezone = TimeZone.current.identifier
+            let selectedTimezone = settings.spoofedTimezone
+
+            // For auto mode, pick a timezone different from system timezone
+            let effectiveTimezone: SpoofedTimezone
+            if selectedTimezone == .auto {
+                // If system is America/New_York or similar US Eastern, use Europe/London
+                // Otherwise default to America/New_York (most common)
+                if systemTimezone.hasPrefix("America/New_York") || systemTimezone.hasPrefix("US/Eastern") {
+                    effectiveTimezone = .europeLondon
+                } else {
+                    effectiveTimezone = .americaNewYork
+                }
+            } else {
+                effectiveTimezone = selectedTimezone
+            }
+
+            let tzIdentifier = effectiveTimezone.timezoneIdentifier
+            let tzOffsetMinutes = effectiveTimezone.utcOffsetMinutes
+
+            scriptParts.append("""
+                // Spoof timezone
+                (function() {
+                    const spoofedTimezone = '\(tzIdentifier)';
+                    const spoofedOffsetMinutes = \(tzOffsetMinutes);
+
+                    // Override Date.prototype.getTimezoneOffset
+                    const originalGetTimezoneOffset = Date.prototype.getTimezoneOffset;
+                    Date.prototype.getTimezoneOffset = function() {
+                        // getTimezoneOffset returns the difference in minutes between UTC and local time
+                        // A positive value means behind UTC, negative means ahead
+                        return -spoofedOffsetMinutes;
+                    };
+
+                    // Override Intl.DateTimeFormat to use spoofed timezone
+                    const originalDateTimeFormat = Intl.DateTimeFormat;
+                    const originalDateTimeFormatResolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions;
+
+                    Intl.DateTimeFormat = function(...args) {
+                        const options = args[1] || {};
+                        if (!options.timeZone) {
+                            options.timeZone = spoofedTimezone;
+                        }
+                        args[1] = options;
+                        return new originalDateTimeFormat(...args);
+                    };
+                    Intl.DateTimeFormat.prototype = originalDateTimeFormat.prototype;
+                    Intl.DateTimeFormat.supportedLocalesOf = originalDateTimeFormat.supportedLocalesOf;
+
+                    // Override resolvedOptions to return spoofed timezone
+                    Intl.DateTimeFormat.prototype.resolvedOptions = function() {
+                        const options = originalDateTimeFormatResolvedOptions.call(this);
+                        options.timeZone = spoofedTimezone;
+                        return options;
+                    };
+
+                    // Override toLocaleString methods to use spoofed timezone
+                    const originalToLocaleString = Date.prototype.toLocaleString;
+                    Date.prototype.toLocaleString = function(...args) {
+                        const options = args[1] || {};
+                        if (!options.timeZone) {
+                            options.timeZone = spoofedTimezone;
+                        }
+                        args[1] = options;
+                        return originalToLocaleString.apply(this, args);
+                    };
+
+                    const originalToLocaleDateString = Date.prototype.toLocaleDateString;
+                    Date.prototype.toLocaleDateString = function(...args) {
+                        const options = args[1] || {};
+                        if (!options.timeZone) {
+                            options.timeZone = spoofedTimezone;
+                        }
+                        args[1] = options;
+                        return originalToLocaleDateString.apply(this, args);
+                    };
+
+                    const originalToLocaleTimeString = Date.prototype.toLocaleTimeString;
+                    Date.prototype.toLocaleTimeString = function(...args) {
+                        const options = args[1] || {};
+                        if (!options.timeZone) {
+                            options.timeZone = spoofedTimezone;
+                        }
+                        args[1] = options;
+                        return originalToLocaleTimeString.apply(this, args);
+                    };
+
+                    console.log('[Barc] Timezone spoofing enabled: ' + spoofedTimezone);
+                })();
+            """)
+        }
+
         // Clipboard access blocking
         if settings.clipboardAccessBlocking {
             scriptParts.append("""
