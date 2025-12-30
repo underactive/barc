@@ -4,10 +4,12 @@ struct AddressBarView: View {
     @EnvironmentObject var browserState: BrowserState
     @ObservedObject private var privacySettings = PrivacySettings.shared
     @StateObject private var networkMonitor = NetworkActivityMonitor.shared
+    @StateObject private var blockedMonitor = BlockedRequestsMonitor.shared
     @ObservedObject private var soundManager = NetworkSoundManager.shared
     @Environment(\.openSettings) private var openSettings
     @State private var inputText: String = ""
     @State private var isEditing: Bool = false
+    @State private var showingPrivacyPopover: Bool = false
     @FocusState private var isFocused: Bool
 
     private var maxPrivacyScore: Int { 10 }
@@ -56,6 +58,16 @@ struct AddressBarView: View {
         case 0.5..<0.8: return "Privacy Score: \(privacyScore)/\(maxPrivacyScore) - Moderate protection"
         default: return "Privacy Score: \(privacyScore)/\(maxPrivacyScore) - Limited protection"
         }
+    }
+
+    private var blockedCount: Int {
+        guard let tabId = browserState.selectedTabId else { return 0 }
+        return blockedMonitor.blockedCount(for: tabId)
+    }
+
+    private var blockedRequests: [BlockedRequestsMonitor.BlockedRequest] {
+        guard let tabId = browserState.selectedTabId else { return [] }
+        return blockedMonitor.blockedRequests(for: tabId)
     }
 
     var body: some View {
@@ -156,17 +168,41 @@ struct AddressBarView: View {
                 }
             }
 
-            // Privacy shield indicator
-            Button(action: {
-                SettingsState.shared.selectedTab = .privacy
-                openSettings()
-            }) {
-                Image(systemName: privacyScoreIcon)
-                    .font(.system(size: 14))
-                    .foregroundColor(privacyScoreColor)
+            // Privacy shield indicator with blocked count badge
+            Button(action: { showingPrivacyPopover.toggle() }) {
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: privacyScoreIcon)
+                        .font(.system(size: 14))
+                        .foregroundColor(privacyScoreColor)
+
+                    // Badge showing blocked count
+                    if blockedCount > 0 {
+                        Text(blockedCount > 99 ? "99+" : "\(blockedCount)")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 3)
+                            .padding(.vertical, 1)
+                            .background(Capsule().fill(Color.red))
+                            .offset(x: 6, y: -6)
+                    }
+                }
             }
             .buttonStyle(.plain)
-            .help(privacyScoreDescription)
+            .help(blockedCount > 0 ? "\(blockedCount) blocked - \(privacyScoreDescription)" : privacyScoreDescription)
+            .popover(isPresented: $showingPrivacyPopover, arrowEdge: .bottom) {
+                PrivacyShieldPopover(
+                    privacyScore: privacyScore,
+                    maxPrivacyScore: maxPrivacyScore,
+                    privacyScoreColor: privacyScoreColor,
+                    privacyScoreIcon: privacyScoreIcon,
+                    blockedRequests: blockedRequests,
+                    onOpenSettings: {
+                        showingPrivacyPopover = false
+                        SettingsState.shared.selectedTab = .privacy
+                        openSettings()
+                    }
+                )
+            }
 
             // Network activity indicators with popover menu
             if networkMonitor.showURLBarNetworkActivity {
@@ -290,6 +326,109 @@ struct LoadingProgressView: View {
             }
         }
         .frame(height: 2)
+    }
+}
+
+// MARK: - Privacy Shield Popover
+
+struct PrivacyShieldPopover: View {
+    let privacyScore: Int
+    let maxPrivacyScore: Int
+    let privacyScoreColor: Color
+    let privacyScoreIcon: String
+    let blockedRequests: [BlockedRequestsMonitor.BlockedRequest]
+    let onOpenSettings: () -> Void
+
+    private var groupedRequests: [(domain: String, count: Int, reasons: Set<BlockedRequestsMonitor.BlockedRequest.BlockReason>)] {
+        var domainInfo: [String: (count: Int, reasons: Set<BlockedRequestsMonitor.BlockedRequest.BlockReason>)] = [:]
+        for request in blockedRequests {
+            if var info = domainInfo[request.domain] {
+                info.count += 1
+                info.reasons.insert(request.reason)
+                domainInfo[request.domain] = info
+            } else {
+                domainInfo[request.domain] = (count: 1, reasons: [request.reason])
+            }
+        }
+        return domainInfo.map { (domain: $0.key, count: $0.value.count, reasons: $0.value.reasons) }
+            .sorted { $0.count > $1.count }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Privacy score header
+            HStack {
+                Image(systemName: privacyScoreIcon)
+                    .font(.system(size: 16))
+                    .foregroundColor(privacyScoreColor)
+                Text("Privacy Score: \(privacyScore)/\(maxPrivacyScore)")
+                    .font(.system(size: 13, weight: .medium))
+                Spacer()
+            }
+
+            Divider()
+
+            // Blocked requests section
+            if blockedRequests.isEmpty {
+                HStack {
+                    Image(systemName: "checkmark.circle")
+                        .foregroundColor(.green)
+                    Text("No requests blocked on this page")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Blocked Requests (\(blockedRequests.count))")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.secondary)
+
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 6) {
+                            ForEach(groupedRequests, id: \.domain) { item in
+                                HStack(spacing: 8) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 10))
+                                        .foregroundColor(.red)
+
+                                    Text(item.domain)
+                                        .font(.system(size: 11, design: .monospaced))
+                                        .lineLimit(1)
+
+                                    Spacer()
+
+                                    if item.count > 1 {
+                                        Text("×\(item.count)")
+                                            .font(.system(size: 10, weight: .medium))
+                                            .foregroundColor(.secondary)
+                                    }
+
+                                    Text(item.reasons.map { $0.rawValue }.joined(separator: ", "))
+                                        .font(.system(size: 9))
+                                        .foregroundColor(.orange)
+                                }
+                            }
+                        }
+                    }
+                    .frame(maxHeight: 150)
+                }
+            }
+
+            Divider()
+
+            // Settings button
+            Button(action: onOpenSettings) {
+                HStack {
+                    Image(systemName: "gearshape")
+                    Text("Privacy Settings")
+                }
+                .font(.system(size: 12))
+            }
+            .buttonStyle(.plain)
+            .foregroundColor(.accentColor)
+        }
+        .padding(12)
+        .frame(width: 280)
     }
 }
 

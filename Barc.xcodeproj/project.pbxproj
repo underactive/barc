@@ -19,6 +19,7 @@
 		A100000A238A0001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001C238A0001 /* SettingsView.swift */; };
 		A100000B238A0001 /* NetworkActivityMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001D238A0001 /* NetworkActivityMonitor.swift */; };
 		A100000C238A0001 /* NetworkSoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001E238A0001 /* NetworkSoundManager.swift */; };
+		A100000D238A0001 /* BlockedRequestsMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001F238A0001 /* BlockedRequestsMonitor.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,6 +38,7 @@
 		A100001C238A0001 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A100001D238A0001 /* NetworkActivityMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkActivityMonitor.swift; sourceTree = "<group>"; };
 		A100001E238A0001 /* NetworkSoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkSoundManager.swift; sourceTree = "<group>"; };
+		A100001F238A0001 /* BlockedRequestsMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockedRequestsMonitor.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -99,6 +101,7 @@
 				A100001B238A0001 /* PrivacySettings.swift */,
 				A100001D238A0001 /* NetworkActivityMonitor.swift */,
 				A100001E238A0001 /* NetworkSoundManager.swift */,
+				A100001F238A0001 /* BlockedRequestsMonitor.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -183,6 +186,7 @@
 				A100000A238A0001 /* SettingsView.swift in Sources */,
 				A100000B238A0001 /* NetworkActivityMonitor.swift in Sources */,
 				A100000C238A0001 /* NetworkSoundManager.swift in Sources */,
+				A100000D238A0001 /* BlockedRequestsMonitor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

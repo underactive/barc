@@ -407,6 +407,7 @@ struct WebView: NSViewRepresentable {
         let tab: Tab
         let settings: PrivacySettings
         let networkMonitor = NetworkActivityMonitor.shared
+        let blockedRequestsMonitor = BlockedRequestsMonitor.shared
         private var observations: [NSKeyValueObservation] = []
 
         init(tab: Tab, settings: PrivacySettings) {
@@ -524,14 +525,23 @@ struct WebView: NSViewRepresentable {
                 }
             }
 
-            // Tracker blocking
-            if settings.trackerBlocking {
-                let blockedDomains = settings.blockedDomains
-                if blockedDomains.contains(where: { url.host?.contains($0) == true }) {
-                    print("[Barc] Blocked tracker: \(url.host ?? "unknown")")
-                    decisionHandler(.cancel)
-                    return
-                }
+            // Tracker blocking and custom blocklist
+            let blockedDomains = settings.blockedDomains
+            if let host = url.host, blockedDomains.contains(where: { host.contains($0) }) {
+                // Determine if it was blocked by built-in trackers or custom blocklist
+                let builtInDomains = PrivacySettings.builtInTrackerDomains.map { $0.domain }
+                let isBuiltInTracker = builtInDomains.contains(where: { host.contains($0) })
+                let reason: BlockedRequestsMonitor.BlockedRequest.BlockReason = isBuiltInTracker ? .tracker : .customBlocklist
+
+                print("[Barc] Blocked \(reason.rawValue.lowercased()): \(host)")
+                blockedRequestsMonitor.reportBlocked(
+                    domain: host,
+                    url: url.absoluteString,
+                    tabId: tab.id,
+                    reason: reason
+                )
+                decisionHandler(.cancel)
+                return
             }
 
             decisionHandler(.allow)
@@ -545,6 +555,8 @@ struct WebView: NSViewRepresentable {
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             tab.isLoading = true
             networkMonitor.reportTransmit(tabId: tab.id)
+            // Clear blocked requests for this tab when navigating to a new page
+            blockedRequestsMonitor.clearBlocked(for: tab.id)
         }
 
         func webView(_ webView: WKWebView, didReceiveServerRedirectForProvisionalNavigation navigation: WKNavigation!) {

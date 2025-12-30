@@ -6,8 +6,9 @@ class BrowserState: ObservableObject {
     @Published var tabs: [Tab] = []
     @Published var selectedTabId: UUID? {
         didSet {
-            // Keep NetworkActivityMonitor in sync with the active tab
+            // Keep monitors in sync with the active tab
             NetworkActivityMonitor.shared.activeTabId = selectedTabId
+            BlockedRequestsMonitor.shared.activeTabId = selectedTabId
         }
     }
     @Published var sidebarCollapsed: Bool = false
@@ -59,6 +60,9 @@ class BrowserState: ObservableObject {
 
     func closeTab(_ tab: Tab) {
         guard let index = tabs.firstIndex(where: { $0.id == tab.id }) else { return }
+
+        // Clean up blocked requests for this tab
+        BlockedRequestsMonitor.shared.removeTab(tab.id)
 
         tabs.remove(at: index)
 
