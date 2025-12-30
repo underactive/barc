@@ -797,6 +797,70 @@ struct WebView: NSViewRepresentable {
             """)
         }
 
+        // Language spoofing
+        if settings.languageSpoofing {
+            let systemLanguage = Locale.current.identifier.replacingOccurrences(of: "_", with: "-")
+            let selectedLanguage = settings.spoofedLanguage
+
+            // For auto mode, pick a language different from system language
+            let effectiveLanguage: SpoofedLanguage
+            if selectedLanguage == .auto {
+                // If system is en-US, use en-GB; otherwise use en-US
+                if systemLanguage.hasPrefix("en-US") || systemLanguage.hasPrefix("en_US") {
+                    effectiveLanguage = .enGB
+                } else {
+                    effectiveLanguage = .enUS
+                }
+            } else {
+                effectiveLanguage = selectedLanguage
+            }
+
+            let langCode = effectiveLanguage.languageCode
+            let langArray = effectiveLanguage.languages.map { "\"\($0)\"" }.joined(separator: ", ")
+
+            scriptParts.append("""
+                // Spoof navigator.language and navigator.languages
+                (function() {
+                    const spoofedLanguage = '\(langCode)';
+                    const spoofedLanguages = [\(langArray)];
+
+                    Object.defineProperty(navigator, 'language', {
+                        get: function() { return spoofedLanguage; },
+                        configurable: true
+                    });
+
+                    Object.defineProperty(navigator, 'languages', {
+                        get: function() { return Object.freeze([...spoofedLanguages]); },
+                        configurable: true
+                    });
+
+                    // Also spoof Intl.DateTimeFormat resolved locale
+                    const originalDateTimeFormat = Intl.DateTimeFormat;
+                    Intl.DateTimeFormat = function(...args) {
+                        if (args.length === 0 || args[0] === undefined) {
+                            args[0] = spoofedLanguage;
+                        }
+                        return new originalDateTimeFormat(...args);
+                    };
+                    Intl.DateTimeFormat.prototype = originalDateTimeFormat.prototype;
+                    Intl.DateTimeFormat.supportedLocalesOf = originalDateTimeFormat.supportedLocalesOf;
+
+                    // Spoof Intl.NumberFormat
+                    const originalNumberFormat = Intl.NumberFormat;
+                    Intl.NumberFormat = function(...args) {
+                        if (args.length === 0 || args[0] === undefined) {
+                            args[0] = spoofedLanguage;
+                        }
+                        return new originalNumberFormat(...args);
+                    };
+                    Intl.NumberFormat.prototype = originalNumberFormat.prototype;
+                    Intl.NumberFormat.supportedLocalesOf = originalNumberFormat.supportedLocalesOf;
+
+                    console.log('[Barc] Language spoofing enabled: ' + spoofedLanguage);
+                })();
+            """)
+        }
+
         // Clipboard access blocking
         if settings.clipboardAccessBlocking {
             scriptParts.append("""

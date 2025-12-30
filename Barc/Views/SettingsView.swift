@@ -364,6 +364,8 @@ struct PrivacySettingsView: View {
                 )
 
                 BatteryAPIBlockingRow(settings: settings)
+
+                LanguageSpoofingRow(settings: settings)
             } header: {
                 Label("Fingerprinting Protection", systemImage: "hand.raised")
                     .font(.headline)
@@ -520,7 +522,7 @@ struct PrivacySettingsView: View {
         .padding()
     }
 
-    private var maxPrivacyScore: Int { 16 }
+    private var maxPrivacyScore: Int { 17 }
 
     private var privacyScore: Int {
         var score = 0
@@ -533,6 +535,7 @@ struct PrivacySettingsView: View {
         if settings.fontFingerprintProtection { score += 1 }
         if settings.audioContextFingerprintProtection { score += 1 }
         if settings.batteryAPIBlocking { score += 1 }
+        if settings.languageSpoofing { score += 1 }
         if settings.trackingPixelBlocking { score += 1 }
         if settings.popupBlocking { score += 1 }
         if settings.thirdPartyCookieBlocking { score += 1 }
@@ -1010,6 +1013,129 @@ struct BatteryAPIBlockingRow: View {
             }
             .padding(12)
             .frame(width: 320)
+        }
+    }
+}
+
+struct LanguageSpoofingRow: View {
+    @ObservedObject var settings: PrivacySettings
+    @State private var showingInfo = false
+
+    private var systemLanguage: String {
+        Locale.current.identifier.replacingOccurrences(of: "_", with: "-")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle(isOn: $settings.languageSpoofing) {
+                HStack(spacing: 12) {
+                    Image(systemName: "globe")
+                        .font(.system(size: 16))
+                        .foregroundColor(settings.languageSpoofing ? .accentColor : .secondary)
+                        .frame(width: 24)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Language Spoofing")
+                            .font(.system(size: 13, weight: .medium))
+                        HStack(spacing: 0) {
+                            Text("Report a common language to reduce fingerprinting. ")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                            Button("More info") {
+                                showingInfo = true
+                            }
+                            .font(.system(size: 11))
+                            .buttonStyle(.plain)
+                            .foregroundColor(.accentColor)
+                        }
+                    }
+                }
+            }
+            .toggleStyle(.switch)
+
+            // Language picker
+            HStack {
+                Text("Spoofed Language:")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+
+                Picker("", selection: $settings.spoofedLanguage) {
+                    ForEach(SpoofedLanguage.allCases) { lang in
+                        Text(lang.displayName).tag(lang)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(maxWidth: 200)
+            }
+            .padding(.leading, 36)
+            .disabled(!settings.languageSpoofing)
+            .opacity(settings.languageSpoofing ? 1.0 : 0.5)
+
+            Text("System language: \(systemLanguage)")
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
+                .padding(.leading, 36)
+        }
+        .padding(.vertical, 4)
+        .popover(isPresented: $showingInfo, arrowEdge: .trailing) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "globe")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("How It Works")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                Text("Your browser's language settings can be used as part of a fingerprint to identify you. This feature reports a different, common language to make you blend in with more users.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Divider()
+
+                HStack {
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("What's Spoofed")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "navigator.language"
+                    )
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "navigator.languages"
+                    )
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "Intl.DateTimeFormat default locale"
+                    )
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "Intl.NumberFormat default locale"
+                    )
+                }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Auto Mode")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.secondary)
+
+                    Text("Automatically picks a language different from your system language. If your system is en-US, it uses en-GB; otherwise it uses en-US.")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(12)
+            .frame(width: 300)
         }
     }
 }
