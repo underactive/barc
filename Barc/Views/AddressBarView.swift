@@ -12,61 +12,15 @@ struct AddressBarView: View {
     @State private var showingPrivacyPopover: Bool = false
     @FocusState private var isFocused: Bool
 
-    private var maxPrivacyScore: Int { 19 }
-
-    private var privacyScore: Int {
-        var score = 0
-        if privacySettings.nonPersistentStorage { score += 1 }
-        if privacySettings.canvasFingerprintProtection { score += 1 }
-        if privacySettings.webGLFingerprintProtection { score += 1 }
-        if privacySettings.webRTCProtection { score += 1 }
-        if privacySettings.trackerBlocking { score += 1 }
-        if privacySettings.hardwareFingerprintResistance { score += 1 }
-        if privacySettings.fontFingerprintProtection { score += 1 }
-        if privacySettings.audioContextFingerprintProtection { score += 1 }
-        if privacySettings.batteryAPIBlocking { score += 1 }
-        if privacySettings.languageSpoofing { score += 1 }
-        if privacySettings.timezoneSpoofing { score += 1 }
-        if privacySettings.screenResolutionSpoofing { score += 1 }
-        if privacySettings.trackingPixelBlocking { score += 1 }
-        if privacySettings.popupBlocking { score += 1 }
-        if privacySettings.thirdPartyCookieBlocking { score += 1 }
-        if privacySettings.cookieBannerAutoReject { score += 1 }
-        if privacySettings.clipboardAccessBlocking { score += 1 }
-        if privacySettings.httpsOnlyMode != .off { score += 1 }
-        if privacySettings.referrerPolicy != .defaultPolicy { score += 1 }
-        return score
-    }
-
-    private var privacyScorePercent: Double {
-        Double(privacyScore) / Double(maxPrivacyScore)
-    }
-
-    private var privacyScoreColor: Color {
-        switch privacyScorePercent {
-        case 1.0: return .green
-        case 0.8..<1.0: return .blue
-        case 0.5..<0.8: return .orange
-        default: return .red
-        }
-    }
-
-    private var privacyScoreIcon: String {
-        switch privacyScorePercent {
-        case 1.0: return "shield.checkered"
-        case 0.8..<1.0: return "shield.lefthalf.filled"
-        case 0.5..<0.8: return "shield"
-        default: return "shield.slash"
-        }
-    }
+    // Privacy score helpers (delegate to PrivacySettings single source of truth)
+    private var maxPrivacyScore: Int { PrivacySettings.maxPrivacyScore }
+    private var privacyScore: Int { privacySettings.privacyScore }
+    private var privacyScorePercent: Double { privacySettings.privacyScorePercent }
+    private var privacyScoreColor: Color { privacySettings.privacyScoreColor }
+    private var privacyScoreIcon: String { privacySettings.privacyScoreIcon }
 
     private var privacyScoreDescription: String {
-        switch privacyScorePercent {
-        case 1.0: return "Privacy Score: \(privacyScore)/\(maxPrivacyScore) - Maximum protection"
-        case 0.8..<1.0: return "Privacy Score: \(privacyScore)/\(maxPrivacyScore) - Strong protection"
-        case 0.5..<0.8: return "Privacy Score: \(privacyScore)/\(maxPrivacyScore) - Moderate protection"
-        default: return "Privacy Score: \(privacyScore)/\(maxPrivacyScore) - Limited protection"
-        }
+        "Privacy Score: \(privacyScore)/\(maxPrivacyScore) - \(privacySettings.privacyScoreDescription)"
     }
 
     private var blockedCount: Int {

@@ -336,6 +336,73 @@ class PrivacySettings: ObservableObject {
         searchEngine.searchURL
     }
 
+    // MARK: - Privacy Score (Single Source of Truth)
+
+    /// Maximum privacy score (excluding nuclear options like JS disable)
+    static let maxPrivacyScore: Int = 20
+
+    /// Current privacy score based on enabled protections
+    var privacyScore: Int {
+        var score = 0
+        if nonPersistentStorage { score += 1 }
+        if canvasFingerprintProtection { score += 1 }
+        if webGLFingerprintProtection { score += 1 }
+        if webRTCProtection { score += 1 }
+        if trackerBlocking { score += 1 }
+        if hardwareFingerprintResistance { score += 1 }
+        if fontFingerprintProtection { score += 1 }
+        if audioContextFingerprintProtection { score += 1 }
+        if batteryAPIBlocking { score += 1 }
+        if languageSpoofing { score += 1 }
+        if timezoneSpoofing { score += 1 }
+        if screenResolutionSpoofing { score += 1 }
+        if trackingPixelBlocking { score += 1 }
+        if popupBlocking { score += 1 }
+        if thirdPartyCookieBlocking { score += 1 }
+        if cookieBannerAutoReject { score += 1 }
+        if clipboardAccessBlocking { score += 1 }
+        if blockMediaAutoplay { score += 1 }
+        if httpsOnlyMode != .off { score += 1 }
+        if referrerPolicy != .defaultPolicy { score += 1 }
+        // Note: javaScriptEnabled is intentionally excluded (nuclear option)
+        return score
+    }
+
+    /// Privacy score as a percentage (0.0 to 1.0)
+    var privacyScorePercent: Double {
+        Double(privacyScore) / Double(Self.maxPrivacyScore)
+    }
+
+    /// Color for privacy score display
+    var privacyScoreColor: Color {
+        switch privacyScorePercent {
+        case 1.0: return .green
+        case 0.8..<1.0: return .blue
+        case 0.5..<0.8: return .orange
+        default: return .red
+        }
+    }
+
+    /// Icon for privacy score display
+    var privacyScoreIcon: String {
+        switch privacyScorePercent {
+        case 1.0: return "shield.checkered"
+        case 0.8..<1.0: return "shield.lefthalf.filled"
+        case 0.5..<0.8: return "shield"
+        default: return "shield.slash"
+        }
+    }
+
+    /// Description of current privacy protection level
+    var privacyScoreDescription: String {
+        switch privacyScorePercent {
+        case 1.0: return "Maximum protection"
+        case 0.8..<1.0: return "Strong protection"
+        case 0.5..<0.8: return "Moderate protection"
+        default: return "Limited protection"
+        }
+    }
+
     // MARK: - Reset
 
     func resetToDefaults() {
