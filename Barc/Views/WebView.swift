@@ -102,6 +102,94 @@ struct WebView: NSViewRepresentable {
             }
         }
 
+        // Privacy: Cross-Site Tracking Prevention (ITP-style blocking)
+        if settings.crossSiteTrackingPrevention {
+            // Block third-party tracking scripts, pixels, and beacons
+            let crossSiteTrackingRules = """
+            [
+                {
+                    "trigger": {
+                        "url-filter": ".*",
+                        "load-type": ["third-party"],
+                        "resource-type": ["script"],
+                        "if-domain": ["*"]
+                    },
+                    "action": {
+                        "type": "block"
+                    },
+                    "trigger": {
+                        "url-filter": ".*\\\\.(facebook|google-analytics|doubleclick|googleadservices|googlesyndication|amazon-adsystem|scorecardresearch|quantserve|adnxs|criteo|outbrain|taboola)\\\\..*",
+                        "load-type": ["third-party"]
+                    }
+                },
+                {
+                    "trigger": {
+                        "url-filter": ".*track.*",
+                        "load-type": ["third-party"],
+                        "resource-type": ["script", "image", "raw"]
+                    },
+                    "action": {
+                        "type": "block"
+                    }
+                },
+                {
+                    "trigger": {
+                        "url-filter": ".*beacon.*",
+                        "load-type": ["third-party"],
+                        "resource-type": ["script", "image", "raw"]
+                    },
+                    "action": {
+                        "type": "block"
+                    }
+                },
+                {
+                    "trigger": {
+                        "url-filter": ".*analytics.*",
+                        "load-type": ["third-party"],
+                        "resource-type": ["script", "image", "raw"]
+                    },
+                    "action": {
+                        "type": "block"
+                    }
+                },
+                {
+                    "trigger": {
+                        "url-filter": ".*pixel.*",
+                        "load-type": ["third-party"],
+                        "resource-type": ["image"]
+                    },
+                    "action": {
+                        "type": "block"
+                    }
+                },
+                {
+                    "trigger": {
+                        "url-filter": ".*collect.*",
+                        "load-type": ["third-party"],
+                        "resource-type": ["script", "image", "raw"]
+                    },
+                    "action": {
+                        "type": "block"
+                    }
+                }
+            ]
+            """
+
+            WKContentRuleListStore.default().compileContentRuleList(
+                forIdentifier: "crossSiteTrackingPrevention",
+                encodedContentRuleList: crossSiteTrackingRules
+            ) { ruleList, error in
+                if let ruleList = ruleList {
+                    DispatchQueue.main.async {
+                        configuration.userContentController.add(ruleList)
+                    }
+                    print("[Barc] Cross-site tracking prevention enabled")
+                } else if let error = error {
+                    print("[Barc] Failed to compile cross-site tracking rules: \(error)")
+                }
+            }
+        }
+
         return configuration
     }
 

@@ -239,6 +239,10 @@ class PrivacySettings: ObservableObject {
         didSet { objectWillChange.send() }
     }
 
+    @AppStorage("privacy.crossSiteTrackingPrevention") var crossSiteTrackingPrevention: Bool = true {
+        didSet { objectWillChange.send() }
+    }
+
     @AppStorage("privacy.fraudulentWebsiteWarning") var fraudulentWebsiteWarning: Bool = true {
         didSet { objectWillChange.send() }
     }
@@ -339,7 +343,7 @@ class PrivacySettings: ObservableObject {
     // MARK: - Privacy Score (Single Source of Truth)
 
     /// Maximum privacy score (excluding nuclear options like JS disable)
-    static let maxPrivacyScore: Int = 20
+    static let maxPrivacyScore: Int = 21
 
     /// Current privacy score based on enabled protections
     var privacyScore: Int {
@@ -362,6 +366,7 @@ class PrivacySettings: ObservableObject {
         if cookieBannerAutoReject { score += 1 }
         if clipboardAccessBlocking { score += 1 }
         if blockMediaAutoplay { score += 1 }
+        if crossSiteTrackingPrevention { score += 1 }
         if httpsOnlyMode != .off { score += 1 }
         if referrerPolicy != .defaultPolicy { score += 1 }
         // Note: javaScriptEnabled is intentionally excluded (nuclear option)
@@ -428,6 +433,7 @@ class PrivacySettings: ObservableObject {
         clipboardAccessBlocking = true
         javaScriptEnabled = true
         blockMediaAutoplay = true
+        crossSiteTrackingPrevention = true
         fraudulentWebsiteWarning = true
         httpsOnlyMode = .upgrade
         referrerPolicy = .strictOrigin

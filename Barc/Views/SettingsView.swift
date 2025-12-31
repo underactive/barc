@@ -432,6 +432,8 @@ struct PrivacySettingsView: View {
                     isOn: $settings.thirdPartyCookieBlocking
                 )
 
+                CrossSiteTrackingRow(settings: settings)
+
                 CookieBannerRow(settings: settings)
 
                 ClipboardBlockingRow(settings: settings)
@@ -847,6 +849,100 @@ struct TrackerBlockingRow: View {
                 .frame(maxHeight: 300)
             }
             .frame(width: 380)
+        }
+    }
+}
+
+struct CrossSiteTrackingRow: View {
+    @ObservedObject var settings: PrivacySettings
+    @State private var showingInfo = false
+
+    var body: some View {
+        Toggle(isOn: $settings.crossSiteTrackingPrevention) {
+            HStack(spacing: 12) {
+                Image(systemName: "arrow.left.arrow.right.circle")
+                    .font(.system(size: 16))
+                    .foregroundColor(settings.crossSiteTrackingPrevention ? .accentColor : .secondary)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Cross-Site Tracking Prevention")
+                        .font(.system(size: 13, weight: .medium))
+                    HStack(spacing: 0) {
+                        Text("Block tracking across websites (ITP-style). ")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                        Button("More info") {
+                            showingInfo = true
+                        }
+                        .font(.system(size: 11))
+                        .buttonStyle(.plain)
+                        .foregroundColor(.accentColor)
+                    }
+                }
+            }
+        }
+        .toggleStyle(.switch)
+        .padding(.vertical, 4)
+        .popover(isPresented: $showingInfo, arrowEdge: .trailing) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "arrow.left.arrow.right.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("Intelligent Tracking Prevention")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                Text("Similar to Safari's ITP, this feature blocks cross-site tracking resources that follow you across different websites to build a profile of your browsing behavior.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Divider()
+
+                HStack {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.red)
+                    Text("What's Blocked")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Third-party tracking scripts"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Cross-site analytics beacons"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Tracking pixels from other domains"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Data collection endpoints"
+                    )
+                }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Known Trackers Blocked")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.secondary)
+
+                    Text("Facebook, Google Analytics, DoubleClick, Amazon Ads, Criteo, Outbrain, Taboola, and more")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(12)
+            .frame(width: 300)
         }
     }
 }
