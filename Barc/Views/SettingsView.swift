@@ -463,6 +463,8 @@ struct PrivacySettingsView: View {
 
                 ClipboardBlockingRow(settings: settings)
 
+                CryptoMinerBlockingRow(settings: settings)
+
                 // Custom Blocklist
                 CustomBlocklistView(settings: settings, newDomain: $newBlockedDomain)
             } header: {
@@ -1358,6 +1360,99 @@ struct ClipboardBlockingRow: View {
                         text: "Copy actions (writeText and write)"
                     )
                 }
+            }
+            .padding(12)
+            .frame(width: 300)
+        }
+    }
+}
+
+struct CryptoMinerBlockingRow: View {
+    @ObservedObject var settings: PrivacySettings
+    @State private var showingInfo = false
+
+    var body: some View {
+        Toggle(isOn: $settings.cryptoMinerBlocking) {
+            HStack(spacing: 12) {
+                Image(systemName: "bitcoinsign.circle")
+                    .font(.system(size: 16))
+                    .foregroundColor(settings.cryptoMinerBlocking ? .accentColor : .secondary)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Crypto Miner Blocking")
+                        .font(.system(size: 13, weight: .medium))
+                    HStack(spacing: 0) {
+                        Text("Block cryptocurrency mining scripts. ")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                        Button("More info") {
+                            showingInfo = true
+                        }
+                        .font(.system(size: 11))
+                        .buttonStyle(.plain)
+                        .foregroundColor(.accentColor)
+                    }
+                }
+            }
+        }
+        .toggleStyle(.switch)
+        .padding(.vertical, 4)
+        .popover(isPresented: $showingInfo, arrowEdge: .trailing) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "bitcoinsign.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("What's Blocked")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Known mining domains (Coinhive, CryptoLoot, etc.)"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Suspicious Web Workers with mining patterns"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Mining script injection attempts"
+                    )
+                }
+
+                Divider()
+
+                HStack {
+                    Image(systemName: "eye.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.orange)
+                    Text("Behavioral Detection")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "waveform.path",
+                        text: "Monitors WebAssembly usage patterns"
+                    )
+                    InfoRow(
+                        icon: "cpu",
+                        text: "Tracks excessive Worker thread spawning"
+                    )
+                    InfoRow(
+                        icon: "magnifyingglass",
+                        text: "Scans for mining-related code patterns"
+                    )
+                }
+
+                Divider()
+
+                Text("Cryptojacking uses your CPU to mine cryptocurrency without consent, slowing down your device.")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
             }
             .padding(12)
             .frame(width: 300)

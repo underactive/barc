@@ -17,6 +17,7 @@ class BlockedRequestsMonitor: ObservableObject {
             case tracker = "Tracker"
             case customBlocklist = "Custom Blocklist"
             case trackingPixel = "Tracking Pixel"
+            case cryptoMiner = "Crypto Miner"
         }
 
         static func == (lhs: BlockedRequest, rhs: BlockedRequest) -> Bool {

@@ -1369,6 +1369,118 @@ struct WebView: NSViewRepresentable {
             """)
         }
 
+        // Crypto Miner Behavioral Detection
+        if settings.cryptoMinerBlocking {
+            scriptParts.append("""
+                // Crypto Miner Behavioral Detection
+                (function() {
+                    // Suspicious patterns in scripts that indicate mining
+                    const miningPatterns = [
+                        /cryptonight/i,
+                        /coinhive/i,
+                        /coin-hive/i,
+                        /webminer/i,
+                        /minero/i,
+                        /cryptoloot/i,
+                        /hashrate/i,
+                        /startMining/i,
+                        /CoinImp/i,
+                        /JSEcoin/i,
+                        /miner\\.start/i,
+                        /\\bwasm\\b.*\\bminer\\b/i,
+                        /\\bminer\\b.*\\bwasm\\b/i
+                    ];
+
+                    // Monitor WebAssembly instantiation (miners use WASM for performance)
+                    const originalInstantiate = WebAssembly.instantiate;
+                    const originalInstantiateStreaming = WebAssembly.instantiateStreaming;
+                    let wasmInstanceCount = 0;
+
+                    WebAssembly.instantiate = function(...args) {
+                        wasmInstanceCount++;
+                        console.log('[Barc] WebAssembly.instantiate called (count: ' + wasmInstanceCount + ')');
+
+                        // If too many WASM instances, might be mining
+                        if (wasmInstanceCount > 5) {
+                            console.warn('[Barc] Suspicious: Multiple WebAssembly instances detected');
+                        }
+
+                        return originalInstantiate.apply(this, args);
+                    };
+
+                    if (originalInstantiateStreaming) {
+                        WebAssembly.instantiateStreaming = function(...args) {
+                            wasmInstanceCount++;
+                            console.log('[Barc] WebAssembly.instantiateStreaming called (count: ' + wasmInstanceCount + ')');
+                            return originalInstantiateStreaming.apply(this, args);
+                        };
+                    }
+
+                    // Monitor Worker creation (miners spawn workers for parallel hashing)
+                    const originalWorker = window.Worker;
+                    let workerCount = 0;
+
+                    window.Worker = function(scriptURL, options) {
+                        workerCount++;
+                        const urlStr = scriptURL.toString().toLowerCase();
+
+                        // Check if worker URL contains mining-related patterns
+                        for (const pattern of miningPatterns) {
+                            if (pattern.test(urlStr)) {
+                                console.warn('[Barc] Blocked suspicious mining worker: ' + scriptURL);
+                                // Return a dummy worker that does nothing
+                                return {
+                                    postMessage: function() {},
+                                    terminate: function() {},
+                                    addEventListener: function() {},
+                                    removeEventListener: function() {},
+                                    onmessage: null,
+                                    onerror: null
+                                };
+                            }
+                        }
+
+                        // Log high worker count (potential mining)
+                        if (workerCount > 8) {
+                            console.warn('[Barc] Suspicious: Many Web Workers spawned (' + workerCount + ')');
+                        }
+
+                        return new originalWorker(scriptURL, options);
+                    };
+                    window.Worker.prototype = originalWorker.prototype;
+
+                    // Monitor for mining script injection via createElement
+                    const originalCreateElement = document.createElement;
+                    document.createElement = function(tagName) {
+                        const element = originalCreateElement.apply(this, arguments);
+
+                        if (tagName.toLowerCase() === 'script') {
+                            const originalSetSrc = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src').set;
+                            Object.defineProperty(element, 'src', {
+                                set: function(value) {
+                                    const urlStr = value.toString().toLowerCase();
+                                    for (const pattern of miningPatterns) {
+                                        if (pattern.test(urlStr)) {
+                                            console.warn('[Barc] Blocked mining script: ' + value);
+                                            return; // Don't set the src
+                                        }
+                                    }
+                                    originalSetSrc.call(this, value);
+                                },
+                                get: function() {
+                                    return Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src').get.call(this);
+                                }
+                            });
+                        }
+
+                        return element;
+                    };
+
+                    console.log('[Barc] Crypto miner behavioral detection enabled');
+                })();
+            """)
+        }
+
         // Cookie Banner Auto-Reject
         if settings.cookieBannerAutoReject {
             scriptParts.append("""
@@ -1825,13 +1937,21 @@ struct WebView: NSViewRepresentable {
                 }
             }
 
-            // Tracker blocking and custom blocklist
+            // Tracker, miner, and custom blocklist blocking
             let blockedDomains = settings.blockedDomains
             if let host = url.host, blockedDomains.contains(where: { host.contains($0) }) {
-                // Determine if it was blocked by built-in trackers or custom blocklist
-                let builtInDomains = PrivacySettings.builtInTrackerDomains.map { $0.domain }
-                let isBuiltInTracker = builtInDomains.contains(where: { host.contains($0) })
-                let reason: BlockedRequestsMonitor.BlockedRequest.BlockReason = isBuiltInTracker ? .tracker : .customBlocklist
+                // Determine the reason for blocking
+                let builtInTrackerDomains = PrivacySettings.builtInTrackerDomains.map { $0.domain }
+                let builtInMiningDomains = PrivacySettings.builtInMiningDomains.map { $0.domain }
+
+                let reason: BlockedRequestsMonitor.BlockedRequest.BlockReason
+                if builtInMiningDomains.contains(where: { host.contains($0) }) {
+                    reason = .cryptoMiner
+                } else if builtInTrackerDomains.contains(where: { host.contains($0) }) {
+                    reason = .tracker
+                } else {
+                    reason = .customBlocklist
+                }
 
                 print("[Barc] Blocked \(reason.rawValue.lowercased()): \(host)")
                 blockedRequestsMonitor.reportBlocked(

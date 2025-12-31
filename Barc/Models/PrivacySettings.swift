@@ -247,6 +247,10 @@ class PrivacySettings: ObservableObject {
         didSet { objectWillChange.send() }
     }
 
+    @AppStorage("privacy.cryptoMinerBlocking") var cryptoMinerBlocking: Bool = true {
+        didSet { objectWillChange.send() }
+    }
+
     @AppStorage("privacy.fraudulentWebsiteWarning") var fraudulentWebsiteWarning: Bool = true {
         didSet { objectWillChange.send() }
     }
@@ -318,18 +322,85 @@ class PrivacySettings: ObservableObject {
         TrackerDomain("everesttech.net", "Adobe Advertising Cloud")
     ]
 
+    /// Built-in crypto mining domains (single source of truth)
+    static let builtInMiningDomains: [TrackerDomain] = [
+        // Major mining services (defunct but may still appear)
+        TrackerDomain("coinhive.com", "Coinhive (defunct)"),
+        TrackerDomain("coin-hive.com", "Coinhive alternate"),
+        TrackerDomain("authedmine.com", "Coinhive AuthedMine"),
+        TrackerDomain("crypto-loot.com", "CryptoLoot"),
+        TrackerDomain("cryptoloot.pro", "CryptoLoot"),
+        TrackerDomain("minero.cc", "Minero"),
+        TrackerDomain("webmine.pro", "WebMine"),
+        TrackerDomain("webminepool.com", "WebMinePool"),
+        TrackerDomain("jsecoin.com", "JSEcoin"),
+        TrackerDomain("monerominer.rocks", "Monero Miner"),
+        TrackerDomain("2giga.link", "Mining redirector"),
+        TrackerDomain("hashforcash.us", "HashForCash"),
+        TrackerDomain("coinerra.com", "CoinErra"),
+        TrackerDomain("coin-have.com", "CoinHave"),
+        TrackerDomain("coinblind.com", "CoinBlind"),
+        TrackerDomain("coinnebula.com", "CoinNebula"),
+        TrackerDomain("miner.pr0gramm.com", "pr0gramm miner"),
+        TrackerDomain("minemytraffic.com", "MineMyTraffic"),
+        TrackerDomain("ppoi.org", "PPOI miner"),
+        TrackerDomain("projectpoi.com", "Project POI"),
+        TrackerDomain("cryptonight.wasm", "CryptoNight WASM"),
+        TrackerDomain("papoto.com", "Papoto miner"),
+        TrackerDomain("coinlab.biz", "CoinLab"),
+        TrackerDomain("ad-miner.com", "Ad-Miner"),
+        TrackerDomain("party-nngvitbizn.now.sh", "Party miner"),
+        TrackerDomain("webminerpool.com", "WebMinerPool"),
+        // Mining pools commonly abused for browser mining
+        TrackerDomain("minergate.com", "MinerGate"),
+        TrackerDomain("load.jsecoin.com", "JSEcoin loader"),
+        TrackerDomain("static.reasedoper.pw", "Reasedoper miner"),
+        TrackerDomain("mataharirama.xyz", "Matahari miner"),
+        TrackerDomain("listat.biz", "Listat miner"),
+        TrackerDomain("lmodr.biz", "Lmodr miner"),
+        TrackerDomain("jyhfuqoh.info", "Obfuscated miner"),
+        TrackerDomain("gridcash.net", "GridCash"),
+        TrackerDomain("coinpot.co", "CoinPot"),
+        TrackerDomain("coinpirate.cf", "CoinPirate"),
+        TrackerDomain("rocks.io", "Rocks miner"),
+        TrackerDomain("cookiescript.info", "CookieScript miner"),
+        TrackerDomain("cookiescriptcdn.pro", "CookieScript CDN"),
+        TrackerDomain("cryptaloot.pro", "Cryptaloot"),
+        TrackerDomain("bjorksta.men", "Bjorksta miner"),
+        TrackerDomain("crypto.csgocpu.com", "CSGO CPU miner"),
+        TrackerDomain("noblock.pro", "NoBlock miner"),
+        TrackerDomain("freecontent.bid", "FreeContent miner"),
+        TrackerDomain("freecontent.date", "FreeContent miner"),
+        TrackerDomain("freecontent.faith", "FreeContent miner"),
+        TrackerDomain("freecontent.party", "FreeContent miner"),
+        TrackerDomain("freecontent.science", "FreeContent miner"),
+        TrackerDomain("freecontent.stream", "FreeContent miner"),
+        TrackerDomain("freecontent.trade", "FreeContent miner"),
+        TrackerDomain("freecontent.win", "FreeContent miner")
+    ]
+
     /// Built-in tracker domain names only (for blocking logic)
     private var builtInBlockedDomains: [String] {
         Self.builtInTrackerDomains.map { $0.domain }
     }
 
-    /// Combined list of all blocked domains (built-in trackers + custom blocklist)
+    /// Built-in mining domain names only (for blocking logic)
+    private var builtInMiningBlockedDomains: [String] {
+        Self.builtInMiningDomains.map { $0.domain }
+    }
+
+    /// Combined list of all blocked domains (built-in trackers + miners + custom blocklist)
     var blockedDomains: [String] {
         var domains: [String] = []
 
         // Add built-in tracker domains if tracker blocking is enabled
         if trackerBlocking {
             domains.append(contentsOf: builtInBlockedDomains)
+        }
+
+        // Add built-in mining domains if crypto miner blocking is enabled
+        if cryptoMinerBlocking {
+            domains.append(contentsOf: builtInMiningBlockedDomains)
         }
 
         // Add custom blocked domains if custom blocklist is enabled
@@ -347,7 +418,7 @@ class PrivacySettings: ObservableObject {
     // MARK: - Privacy Score (Single Source of Truth)
 
     /// Maximum privacy score (excluding nuclear options like JS disable)
-    static let maxPrivacyScore: Int = 22
+    static let maxPrivacyScore: Int = 23
 
     /// Current privacy score based on enabled protections
     var privacyScore: Int {
@@ -372,6 +443,7 @@ class PrivacySettings: ObservableObject {
         if blockMediaAutoplay { score += 1 }
         if crossSiteTrackingPrevention { score += 1 }
         if socialWidgetBlocking { score += 1 }
+        if cryptoMinerBlocking { score += 1 }
         if httpsOnlyMode != .off { score += 1 }
         if referrerPolicy != .defaultPolicy { score += 1 }
         // Note: javaScriptEnabled is intentionally excluded (nuclear option)
@@ -440,6 +512,7 @@ class PrivacySettings: ObservableObject {
         blockMediaAutoplay = true
         crossSiteTrackingPrevention = true
         socialWidgetBlocking = true
+        cryptoMinerBlocking = true
         fraudulentWebsiteWarning = true
         httpsOnlyMode = .upgrade
         referrerPolicy = .strictOrigin
