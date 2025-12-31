@@ -118,20 +118,26 @@ This file documents all development work done on Barc with Claude Code, so futur
 Barc/
 ├── BarcApp.swift              # App entry point, AppDelegate, menu commands
 ├── Models/
-│   ├── Tab.swift              # Tab model (id, url, title, favicon, loading state)
+│   ├── Tab.swift              # Tab model (id, url, title, favicon, loading state, hasDownloadableVideo)
 │   ├── BrowserState.swift     # Tab management, navigation state
 │   ├── PrivacySettings.swift  # Privacy settings with @AppStorage, whitelist logic
 │   ├── NetworkActivityMonitor.swift  # Singleton for Rx/Tx state
-│   └── NetworkSoundManager.swift     # Modem sounds for network activity (AVAudioEngine)
+│   ├── NetworkSoundManager.swift     # Modem sounds for network activity (AVAudioEngine)
+│   ├── Download.swift         # Download model (progress, status, format)
+│   └── DownloadManager.swift  # Singleton managing yt-dlp downloads
 ├── Views/
 │   ├── ContentView.swift      # Main layout (sidebar + webview)
-│   ├── SidebarView.swift      # Arc-style tabs, network indicators
-│   ├── AddressBarView.swift   # URL bar, navigation, privacy score indicator
-│   ├── WebView.swift          # WKWebView wrapper, privacy scripts, network monitoring JS
-│   └── SettingsView.swift     # Settings window, SettingsState for tab navigation
+│   ├── SidebarView.swift      # Arc-style tabs, downloads section at bottom
+│   ├── AddressBarView.swift   # URL bar, navigation, privacy score, download button
+│   ├── WebView.swift          # WKWebView wrapper, privacy scripts, video detection JS
+│   ├── SettingsView.swift     # Settings window, SettingsState for tab navigation
+│   ├── DownloadsSidebarSection.swift  # Collapsible downloads list
+│   └── DownloadRowView.swift  # Individual download progress row
+├── Resources/
+│   └── yt-dlp                 # Universal binary for video downloads
 ├── Assets.xcassets/
 │   └── AppIcon.appiconset/    # All icon sizes
-├── Barc.entitlements          # App entitlements
+├── Barc.entitlements          # App entitlements (sandbox disabled for yt-dlp)
 └── Info.plist
 .gitignore                     # Git ignore for macOS/Xcode projects
 CONTRIBUTING.md                # Developer onboarding documentation
@@ -224,6 +230,9 @@ open ~/Library/Developer/Xcode/DerivedData/Barc-*/Build/Products/Debug/Barc.app
 26. **Settings reorganization**: Moved Non-Persistent Storage and Storage Whitelist to new "Storage" section at top of privacy settings
 27. **Fingerprinting warning dialog**: Shows warning when toggling fingerprinting options that changes take effect for new tabs, with "Don't show again" checkbox
 28. **JavaScript Toggle (Nuclear Option)**: Added ability to completely disable JavaScript for maximum privacy protection
+29. **Video Download Feature**: Download videos from YouTube, Vimeo, and 1000+ sites using bundled yt-dlp with format selection menu
+30. **Element Picker (xkill mode)**: Click-to-remove page elements like browser dev tools
+31. **Netscape-style Loading Throbber**: Animated "B" logo with shooting stars during page load
 
 ---
 
@@ -232,7 +241,6 @@ open ~/Library/Developer/Xcode/DerivedData/Barc-*/Build/Products/Debug/Barc.app
 - Bookmarks
 - History view
 - Find in page
-- Downloads manager
 - Reader mode
 - Extension support
 - Sync across devices
@@ -240,7 +248,7 @@ open ~/Library/Developer/Xcode/DerivedData/Barc-*/Build/Products/Debug/Barc.app
 
 ---
 
-*Last updated: December 31, 2024 (Session 4)*
+*Last updated: December 31, 2024 (Session 5)*
 
 ---
 
@@ -438,3 +446,85 @@ Added the ability to completely disable JavaScript execution:
 - **Privacy Score**: Disabling JavaScript adds +1 to privacy score (max now 20/20)
 - **Behavior**: Changes take effect for new tabs only (existing tabs keep their JS setting)
 - **Use Case**: Maximum privacy protection for simple HTML sites, or when visiting potentially malicious sites
+
+### Video Download Feature - Session 5
+Added the ability to download videos from YouTube, Vimeo, and 1000+ other sites using bundled yt-dlp.
+
+**New Files Created:**
+- `Barc/Models/Download.swift` - Download model with progress tracking
+- `Barc/Models/DownloadManager.swift` - Singleton managing downloads via yt-dlp subprocess
+- `Barc/Views/DownloadsSidebarSection.swift` - Collapsible sidebar section showing downloads
+- `Barc/Views/DownloadRowView.swift` - Individual download row with progress bar
+- `Barc/Resources/yt-dlp` - Universal binary (arm64 + x86_64, ~35MB)
+
+**Files Modified:**
+- `Barc/Models/Tab.swift` - Added `hasDownloadableVideo` property
+- `Barc/Views/WebView.swift` - Added video detection script and message handler
+- `Barc/Views/SidebarView.swift` - Integrated downloads section at bottom
+- `Barc/Views/AddressBarView.swift` - Added download button with format menu
+- `Barc/Barc.entitlements` - Disabled sandbox (required for yt-dlp)
+- `Barc.xcodeproj/project.pbxproj` - Added new files and yt-dlp resource
+
+**UI/UX:**
+- **Toolbar Button**: Download icon in address bar (arrow.down.circle)
+  - Grayed out when no video detected on page
+  - Blue (accent color) when video is available
+  - Tooltip shows current state
+- **Download Menu**: Clicking button shows popover with:
+  - Header: "Download [video title in blue]" (truncated to 40 chars)
+  - Format options with icons and descriptions:
+    - Best Quality - Original format, no re-encoding
+    - MP4 - Converts to MP4 for compatibility
+    - 720p - Smaller file, good for mobile
+    - 480p - Smallest file, lower quality
+    - Audio Only - Extract audio as MP3
+- **Downloads Section**: At bottom of sidebar
+  - Collapsible with download count badge
+  - Each download shows: title, progress bar, speed, ETA
+  - Status icons: pending (clock), downloading (arrow), completed (checkmark), failed (exclamation)
+  - Hover actions: Cancel, Retry, Reveal in Finder
+  - "Clear Completed" button
+
+**Video Detection:**
+JavaScript injection detects videos on page load:
+- YouTube (youtube.com/watch, youtu.be)
+- Vimeo, Twitter/X, TikTok, Twitch, Reddit, Instagram, Facebook, Dailymotion
+- HTML5 `<video>` elements with src
+- Embedded iframes from video platforms
+- Uses MutationObserver for SPA URL changes
+- Multiple delayed checks for dynamically loaded content
+
+**yt-dlp Integration:**
+- Binary bundled in app resources (universal macOS binary)
+- Arguments: `--no-playlist`, `--newline`, `--progress`
+- Format-specific arguments via `VideoFormat.ytdlpArguments`
+- Parses stdout for progress, speed, ETA, file size
+- Max 3 concurrent downloads with pending queue
+- Sends macOS notification on completion
+
+**VideoFormat Enum:**
+```swift
+enum VideoFormat: String, CaseIterable {
+    case best       // Default, original format
+    case mp4        // -f bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best --merge-output-format mp4
+    case quality720p // -f bestvideo[height<=720]+bestaudio/best[height<=720]/best
+    case quality480p // -f bestvideo[height<=480]+bestaudio/best[height<=480]/best
+    case audioOnly  // -x --audio-format mp3 --audio-quality 0
+}
+```
+
+**Technical Notes:**
+- App sandbox disabled (`com.apple.security.app-sandbox = false`) because yt-dlp is a PyInstaller binary that can't run in sandbox
+- Download location uses `PrivacySettings.shared.downloadLocation` (defaults to ~/Downloads)
+- Message handler: `barcVideoDownload` with `videoStatusUpdate` action
+- Tab model tracks `hasDownloadableVideo` for button state
+
+### Element Picker (xkill mode) - Session 5
+Added ability to click-to-remove page elements (like browser dev tools element picker):
+- **Toolbar Button**: Hammer icon in address bar
+- **Activation**: Click hammer or use keyboard shortcut
+- **Behavior**:
+  - Red overlay highlights hovered elements
+  - Click removes the element from DOM
+  - ESC or click hammer again to exit
+- **Implementation**: JavaScript injection with CSS overlay and click handler
