@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SidebarView: View {
     @EnvironmentObject var browserState: BrowserState
+    @ObservedObject private var downloadManager = DownloadManager.shared
 
     var body: some View {
         VStack(spacing: 0) {
@@ -27,6 +28,16 @@ struct SidebarView: View {
 
             Divider()
                 .padding(.horizontal, 12)
+
+            // Downloads section (only shown when there are downloads)
+            if !downloadManager.downloads.isEmpty {
+                DownloadsSidebarSection()
+                    .padding(.top, 4)
+
+                Divider()
+                    .padding(.horizontal, 12)
+                    .padding(.top, 4)
+            }
 
             // Tabs list
             ScrollView {

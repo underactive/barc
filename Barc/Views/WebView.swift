@@ -8,6 +8,7 @@ struct WebView: NSViewRepresentable {
 
     static let networkMessageHandler = "barcNetwork"
     static let elementPickerMessageHandler = "barcElementPicker"
+    static let videoDownloadMessageHandler = "barcVideoDownload"
 
     func makeNSView(context: Context) -> WKWebView {
         let configuration = createPrivacyConfiguration(coordinator: context.coordinator)
@@ -63,11 +64,17 @@ struct WebView: NSViewRepresentable {
         // Add message handler for element picker
         contentController.add(coordinator, name: Self.elementPickerMessageHandler)
 
+        // Add message handler for video download context menu
+        contentController.add(coordinator, name: Self.videoDownloadMessageHandler)
+
         // Inject network monitoring script (must be first, before privacy scripts)
         injectNetworkMonitoringScript(into: contentController)
 
         // Inject privacy scripts
         injectPrivacyScripts(into: contentController)
+
+        // Inject video detection script for download context menu
+        injectVideoDetectionScript(into: contentController)
 
         configuration.userContentController = contentController
 
@@ -1550,6 +1557,124 @@ struct WebView: NSViewRepresentable {
         controller.addUserScript(script)
     }
 
+    // MARK: - Video Detection Script for Download Context Menu
+
+    private func injectVideoDetectionScript(into controller: WKUserContentController) {
+        let script = """
+        (function() {
+            if (window.__barcVideoDownloadInstalled) return;
+            window.__barcVideoDownloadInstalled = true;
+
+            // Detect video elements on right-click
+            document.addEventListener('contextmenu', function(e) {
+                let videoInfo = null;
+                let target = e.target;
+
+                // Check if clicking directly on a video element
+                if (target.tagName === 'VIDEO') {
+                    videoInfo = {
+                        type: 'video',
+                        src: target.currentSrc || target.src,
+                        pageUrl: window.location.href,
+                        pageTitle: document.title
+                    };
+                }
+
+                // Check if on a YouTube page or clicking near YouTube player
+                if (!videoInfo && (
+                    window.location.hostname.includes('youtube.com') ||
+                    window.location.hostname.includes('youtu.be') ||
+                    target.closest('iframe[src*="youtube.com"]') ||
+                    target.closest('iframe[src*="youtu.be"]') ||
+                    target.closest('#movie_player') ||
+                    target.closest('.html5-video-player') ||
+                    target.closest('ytd-player')
+                )) {
+                    videoInfo = {
+                        type: 'youtube',
+                        pageUrl: window.location.href,
+                        pageTitle: document.title
+                    };
+                }
+
+                // Check if on a Vimeo page or clicking near Vimeo player
+                if (!videoInfo && (
+                    window.location.hostname.includes('vimeo.com') ||
+                    target.closest('iframe[src*="vimeo.com"]') ||
+                    target.closest('.vp-video-wrapper')
+                )) {
+                    videoInfo = {
+                        type: 'vimeo',
+                        pageUrl: window.location.href,
+                        pageTitle: document.title
+                    };
+                }
+
+                // Check if on Twitter/X video
+                if (!videoInfo && (
+                    window.location.hostname.includes('twitter.com') ||
+                    window.location.hostname.includes('x.com') ||
+                    target.closest('[data-testid="videoComponent"]') ||
+                    target.closest('[data-testid="videoPlayer"]')
+                )) {
+                    videoInfo = {
+                        type: 'twitter',
+                        pageUrl: window.location.href,
+                        pageTitle: document.title
+                    };
+                }
+
+                // Check if on TikTok
+                if (!videoInfo && (
+                    window.location.hostname.includes('tiktok.com') ||
+                    target.closest('.tiktok-web-player')
+                )) {
+                    videoInfo = {
+                        type: 'tiktok',
+                        pageUrl: window.location.href,
+                        pageTitle: document.title
+                    };
+                }
+
+                // Check for generic video players
+                if (!videoInfo && (
+                    target.closest('[class*="video-player"]') ||
+                    target.closest('[class*="html5-video"]') ||
+                    target.closest('[class*="jw-video"]') ||
+                    target.closest('[class*="plyr"]') ||
+                    target.closest('[class*="video-js"]')
+                )) {
+                    videoInfo = {
+                        type: 'player',
+                        pageUrl: window.location.href,
+                        pageTitle: document.title
+                    };
+                }
+
+                // If video detected, send message to Swift with coordinates
+                if (videoInfo) {
+                    window.__barcDetectedVideo = videoInfo;
+                    window.webkit.messageHandlers.barcVideoDownload.postMessage({
+                        action: 'videoDetected',
+                        ...videoInfo,
+                        x: e.clientX,
+                        y: e.clientY,
+                        screenX: e.screenX,
+                        screenY: e.screenY
+                    });
+                }
+            }, true);
+        })();
+        """
+
+        let userScript = WKUserScript(
+            source: script,
+            injectionTime: .atDocumentEnd,
+            forMainFrameOnly: false
+        )
+        controller.addUserScript(userScript)
+    }
+
     class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
         let tab: Tab
         let settings: PrivacySettings
@@ -1591,7 +1716,62 @@ struct WebView: NSViewRepresentable {
                         self?.browserState?.isElementPickerActive = false
                     }
                 }
+                return
             }
+
+            // Handle video download messages
+            if message.name == WebView.videoDownloadMessageHandler,
+               let body = message.body as? [String: Any],
+               let action = body["action"] as? String {
+                if action == "videoDetected" {
+                    let x = body["x"] as? CGFloat ?? 0
+                    let y = body["y"] as? CGFloat ?? 0
+                    let pageUrl = body["pageUrl"] as? String ?? ""
+                    let pageTitle = body["pageTitle"] as? String ?? "Video"
+
+                    DispatchQueue.main.async { [weak self] in
+                        self?.showVideoDownloadContextMenu(
+                            at: NSPoint(x: x, y: y),
+                            pageUrl: pageUrl,
+                            pageTitle: pageTitle
+                        )
+                    }
+                }
+            }
+        }
+
+        // MARK: - Video Download Context Menu
+
+        private func showVideoDownloadContextMenu(at viewPoint: NSPoint, pageUrl: String, pageTitle: String) {
+            guard let url = URL(string: pageUrl) else { return }
+            guard let webView = tab.webView else { return }
+
+            let menu = NSMenu()
+
+            let downloadItem = NSMenuItem(
+                title: "Download Video",
+                action: #selector(downloadVideoAction(_:)),
+                keyEquivalent: ""
+            )
+            downloadItem.representedObject = ["url": url, "title": pageTitle]
+            downloadItem.target = self
+            downloadItem.image = NSImage(systemSymbolName: "arrow.down.circle", accessibilityDescription: nil)
+            menu.addItem(downloadItem)
+
+            // The viewPoint is in WKWebView coordinates (origin at top-left)
+            // NSView uses origin at bottom-left, so we need to flip the Y coordinate
+            let flippedY = webView.bounds.height - viewPoint.y
+            let menuLocation = NSPoint(x: viewPoint.x, y: flippedY)
+
+            menu.popUp(positioning: nil, at: menuLocation, in: webView)
+        }
+
+        @objc private func downloadVideoAction(_ sender: NSMenuItem) {
+            guard let info = sender.representedObject as? [String: Any],
+                  let url = info["url"] as? URL,
+                  let title = info["title"] as? String else { return }
+
+            DownloadManager.shared.startDownload(url: url, pageTitle: title)
         }
 
         func setupObservers(for webView: WKWebView) {

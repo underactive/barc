@@ -20,6 +20,11 @@
 		A100000B238A0001 /* NetworkActivityMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001D238A0001 /* NetworkActivityMonitor.swift */; };
 		A100000C238A0001 /* NetworkSoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001E238A0001 /* NetworkSoundManager.swift */; };
 		A100000D238A0001 /* BlockedRequestsMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001F238A0001 /* BlockedRequestsMonitor.swift */; };
+		A100000E238A0001 /* Download.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000030238A0001 /* Download.swift */; };
+		A100000F238A0001 /* DownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000031238A0001 /* DownloadManager.swift */; };
+		A1000010238A0002 /* DownloadsSidebarSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000032238A0001 /* DownloadsSidebarSection.swift */; };
+		A1000010238A0003 /* DownloadRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000033238A0001 /* DownloadRowView.swift */; };
+		A1000010238A0004 /* yt-dlp in Resources */ = {isa = PBXBuildFile; fileRef = A1000034238A0001 /* yt-dlp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,6 +44,11 @@
 		A100001D238A0001 /* NetworkActivityMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkActivityMonitor.swift; sourceTree = "<group>"; };
 		A100001E238A0001 /* NetworkSoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkSoundManager.swift; sourceTree = "<group>"; };
 		A100001F238A0001 /* BlockedRequestsMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockedRequestsMonitor.swift; sourceTree = "<group>"; };
+		A1000030238A0001 /* Download.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Download.swift; sourceTree = "<group>"; };
+		A1000031238A0001 /* DownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadManager.swift; sourceTree = "<group>"; };
+		A1000032238A0001 /* DownloadsSidebarSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadsSidebarSection.swift; sourceTree = "<group>"; };
+		A1000033238A0001 /* DownloadRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadRowView.swift; sourceTree = "<group>"; };
+		A1000034238A0001 /* yt-dlp */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; path = "yt-dlp"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -66,6 +76,7 @@
 				A1000011238A0001 /* BarcApp.swift */,
 				A1000023238A0001 /* Views */,
 				A1000024238A0001 /* Models */,
+				A1000025238A0001 /* Resources */,
 				A1000018238A0001 /* Assets.xcassets */,
 				A1000019238A0001 /* Info.plist */,
 				A100001A238A0001 /* Barc.entitlements */,
@@ -89,6 +100,8 @@
 				A1000014238A0001 /* SidebarView.swift */,
 				A1000015238A0001 /* AddressBarView.swift */,
 				A100001C238A0001 /* SettingsView.swift */,
+				A1000032238A0001 /* DownloadsSidebarSection.swift */,
+				A1000033238A0001 /* DownloadRowView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -102,8 +115,18 @@
 				A100001D238A0001 /* NetworkActivityMonitor.swift */,
 				A100001E238A0001 /* NetworkSoundManager.swift */,
 				A100001F238A0001 /* BlockedRequestsMonitor.swift */,
+				A1000030238A0001 /* Download.swift */,
+				A1000031238A0001 /* DownloadManager.swift */,
 			);
 			path = Models;
+			sourceTree = "<group>";
+		};
+		A1000025238A0001 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A1000034238A0001 /* yt-dlp */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -165,6 +188,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1000008238A0001 /* Assets.xcassets in Resources */,
+				A1000010238A0004 /* yt-dlp in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -187,6 +211,10 @@
 				A100000B238A0001 /* NetworkActivityMonitor.swift in Sources */,
 				A100000C238A0001 /* NetworkSoundManager.swift in Sources */,
 				A100000D238A0001 /* BlockedRequestsMonitor.swift in Sources */,
+				A100000E238A0001 /* Download.swift in Sources */,
+				A100000F238A0001 /* DownloadManager.swift in Sources */,
+				A1000010238A0002 /* DownloadsSidebarSection.swift in Sources */,
+				A1000010238A0003 /* DownloadRowView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
