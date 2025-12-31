@@ -402,6 +402,13 @@ struct PrivacySettingsView: View {
             Section {
                 JavaScriptToggleRow(settings: settings)
 
+                PrivacyToggleRow(
+                    title: "Block Media Autoplay",
+                    description: "Prevent videos and audio from playing automatically until you interact.",
+                    systemImage: "play.slash",
+                    isOn: $settings.blockMediaAutoplay
+                )
+
                 TrackerBlockingRow(settings: settings)
 
                 PrivacyToggleRow(
@@ -570,7 +577,7 @@ struct PrivacySettingsView: View {
         }
     }
 
-    private var maxPrivacyScore: Int { 20 }
+    private var maxPrivacyScore: Int { 21 }
 
     private var privacyScore: Int {
         var score = 0
@@ -591,6 +598,7 @@ struct PrivacySettingsView: View {
         if settings.thirdPartyCookieBlocking { score += 1 }
         if settings.cookieBannerAutoReject { score += 1 }
         if settings.clipboardAccessBlocking { score += 1 }
+        if settings.blockMediaAutoplay { score += 1 }
         if !settings.javaScriptEnabled { score += 1 }  // Nuclear option
         if settings.httpsOnlyMode != .off { score += 1 }
         if settings.referrerPolicy != .defaultPolicy { score += 1 }

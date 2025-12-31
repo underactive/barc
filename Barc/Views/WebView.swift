@@ -47,6 +47,13 @@ struct WebView: NSViewRepresentable {
         preferences.allowsContentJavaScript = settings.javaScriptEnabled
         configuration.defaultWebpagePreferences = preferences
 
+        // Privacy: Block media autoplay
+        if settings.blockMediaAutoplay {
+            configuration.mediaTypesRequiringUserActionForPlayback = .all
+        } else {
+            configuration.mediaTypesRequiringUserActionForPlayback = []
+        }
+
         // Content controller with message handler and scripts
         let contentController = WKUserContentController()
 
