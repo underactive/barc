@@ -1,6 +1,162 @@
 import SwiftUI
 import WebKit
 
+// MARK: - Custom WKWebView with Context Menu
+
+class BarcWebView: WKWebView {
+    weak var coordinator: WebView.Coordinator?
+
+    override func willOpenMenu(_ menu: NSMenu, with event: NSEvent) {
+        // Add separator before our custom items
+        menu.addItem(NSMenuItem.separator())
+
+        // Add "View Source" menu item
+        let viewSourceItem = NSMenuItem(
+            title: "View Page Source",
+            action: #selector(viewPageSource),
+            keyEquivalent: ""
+        )
+        viewSourceItem.target = self
+        menu.addItem(viewSourceItem)
+
+        super.willOpenMenu(menu, with: event)
+    }
+
+    @objc private func viewPageSource() {
+        // Get the page source using JavaScript
+        evaluateJavaScript("document.documentElement.outerHTML") { [weak self] result, error in
+            guard let self = self,
+                  let source = result as? String else {
+                if let error = error {
+                    print("[Barc] Failed to get page source: \(error)")
+                }
+                return
+            }
+
+            DispatchQueue.main.async {
+                self.showSourceWindow(source: source, url: self.url)
+            }
+        }
+    }
+
+    private func showSourceWindow(source: String, url: URL?) {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 800, height: 600),
+            styleMask: [.titled, .closable, .resizable, .miniaturizable],
+            backing: .buffered,
+            defer: false
+        )
+
+        window.title = "Source: \(url?.host ?? "Page")"
+        window.center()
+
+        // Create scroll view with text view
+        let scrollView = NSScrollView(frame: window.contentView!.bounds)
+        scrollView.autoresizingMask = [.width, .height]
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = true
+
+        let textView = NSTextView(frame: scrollView.bounds)
+        textView.autoresizingMask = [.width, .height]
+        textView.isEditable = false
+        textView.isSelectable = true
+        textView.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        textView.backgroundColor = NSColor(red: 0.1, green: 0.1, blue: 0.12, alpha: 1.0)
+        textView.textColor = NSColor(red: 0.9, green: 0.9, blue: 0.9, alpha: 1.0)
+
+        // Apply syntax highlighting
+        let attributedSource = highlightHTMLSyntax(source)
+        textView.textStorage?.setAttributedString(attributedSource)
+
+        scrollView.documentView = textView
+        window.contentView = scrollView
+
+        // Keep window reference and show
+        window.makeKeyAndOrderFront(nil)
+
+        // Store reference to prevent deallocation
+        SourceWindowManager.shared.addWindow(window)
+    }
+
+    private func highlightHTMLSyntax(_ source: String) -> NSAttributedString {
+        let attributedString = NSMutableAttributedString(string: source)
+        let fullRange = NSRange(location: 0, length: (source as NSString).length)
+
+        // Base style
+        let baseFont = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        let baseColor = NSColor(red: 0.9, green: 0.9, blue: 0.9, alpha: 1.0)
+        attributedString.addAttribute(.font, value: baseFont, range: fullRange)
+        attributedString.addAttribute(.foregroundColor, value: baseColor, range: fullRange)
+
+        // Tag names (blue)
+        let tagColor = NSColor(red: 0.4, green: 0.6, blue: 1.0, alpha: 1.0)
+        let tagPattern = try? NSRegularExpression(pattern: "</?([a-zA-Z][a-zA-Z0-9]*)", options: [])
+        tagPattern?.enumerateMatches(in: source, options: [], range: fullRange) { match, _, _ in
+            if let range = match?.range(at: 1) {
+                attributedString.addAttribute(.foregroundColor, value: tagColor, range: range)
+            }
+        }
+
+        // Attribute names (cyan)
+        let attrColor = NSColor(red: 0.5, green: 0.9, blue: 0.9, alpha: 1.0)
+        let attrPattern = try? NSRegularExpression(pattern: "\\s([a-zA-Z-]+)=", options: [])
+        attrPattern?.enumerateMatches(in: source, options: [], range: fullRange) { match, _, _ in
+            if let range = match?.range(at: 1) {
+                attributedString.addAttribute(.foregroundColor, value: attrColor, range: range)
+            }
+        }
+
+        // Attribute values (orange)
+        let valueColor = NSColor(red: 1.0, green: 0.7, blue: 0.4, alpha: 1.0)
+        let valuePattern = try? NSRegularExpression(pattern: "=\"([^\"]*)\"", options: [])
+        valuePattern?.enumerateMatches(in: source, options: [], range: fullRange) { match, _, _ in
+            if let range = match?.range(at: 1) {
+                attributedString.addAttribute(.foregroundColor, value: valueColor, range: range)
+            }
+        }
+
+        // Comments (gray)
+        let commentColor = NSColor(red: 0.5, green: 0.5, blue: 0.5, alpha: 1.0)
+        let commentPattern = try? NSRegularExpression(pattern: "<!--[\\s\\S]*?-->", options: [])
+        commentPattern?.enumerateMatches(in: source, options: [], range: fullRange) { match, _, _ in
+            if let range = match?.range {
+                attributedString.addAttribute(.foregroundColor, value: commentColor, range: range)
+            }
+        }
+
+        // Brackets (gray)
+        let bracketColor = NSColor(red: 0.6, green: 0.6, blue: 0.6, alpha: 1.0)
+        let bracketPattern = try? NSRegularExpression(pattern: "[<>]", options: [])
+        bracketPattern?.enumerateMatches(in: source, options: [], range: fullRange) { match, _, _ in
+            if let range = match?.range {
+                attributedString.addAttribute(.foregroundColor, value: bracketColor, range: range)
+            }
+        }
+
+        return attributedString
+    }
+}
+
+// Window manager to keep references to source windows
+class SourceWindowManager: NSObject, NSWindowDelegate {
+    static let shared = SourceWindowManager()
+    private var windows: [NSWindow] = []
+
+    func addWindow(_ window: NSWindow) {
+        window.isReleasedWhenClosed = false
+        window.delegate = self
+        windows.append(window)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        guard let closedWindow = notification.object as? NSWindow else { return }
+        // Delay removal to allow animations to complete
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.windows.removeAll { $0 === closedWindow }
+        }
+    }
+}
+
 struct WebView: NSViewRepresentable {
     @ObservedObject var tab: Tab
     @EnvironmentObject var browserState: BrowserState
@@ -10,10 +166,11 @@ struct WebView: NSViewRepresentable {
     static let elementPickerMessageHandler = "barcElementPicker"
     static let videoDownloadMessageHandler = "barcVideoDownload"
 
-    func makeNSView(context: Context) -> WKWebView {
+    func makeNSView(context: Context) -> BarcWebView {
         let configuration = createPrivacyConfiguration(coordinator: context.coordinator)
-        let webView = WKWebView(frame: .zero, configuration: configuration)
+        let webView = BarcWebView(frame: .zero, configuration: configuration)
 
+        webView.coordinator = context.coordinator
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true
@@ -29,7 +186,7 @@ struct WebView: NSViewRepresentable {
         return webView
     }
 
-    func updateNSView(_ webView: WKWebView, context: Context) {
+    func updateNSView(_ webView: BarcWebView, context: Context) {
         // Only load if URL changed externally
     }
 
