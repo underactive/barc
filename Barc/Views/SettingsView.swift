@@ -323,21 +323,44 @@ struct PrivacySettingsView: View {
 
     var body: some View {
         Form {
+            // MARK: - Overview
             Section {
-                PrivacyToggleRow(
-                    title: "Non-Persistent Storage",
-                    description: "Clear non-whitelisted cookies and storage when Barc quits.",
-                    systemImage: "clock.badge.xmark",
-                    isOn: $settings.nonPersistentStorage
-                )
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Privacy Score")
+                            .font(.system(size: 13, weight: .medium))
+                        Text(privacyScoreDescription)
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
 
-                // Storage Whitelist
-                StorageWhitelistView(settings: settings, newDomain: $newWhitelistDomain)
+                    Spacer()
+
+                    PrivacyScoreBadge(score: privacyScore, maxScore: maxPrivacyScore)
+                }
+                .padding(.vertical, 4)
+
+                Button("Reset to Recommended Settings") {
+                    showingResetConfirmation = true
+                }
+                .confirmationDialog(
+                    "Reset Privacy Settings?",
+                    isPresented: $showingResetConfirmation,
+                    titleVisibility: .visible
+                ) {
+                    Button("Reset", role: .destructive) {
+                        settings.resetToDefaults()
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("This will enable all privacy protections.")
+                }
             } header: {
-                Label("Storage", systemImage: "internaldrive")
+                Label("Overview", systemImage: "chart.bar")
                     .font(.headline)
             }
 
+            // MARK: - Fingerprinting Protection
             Section {
                 FingerprintToggleRow(
                     title: "Canvas Fingerprint Protection",
@@ -520,39 +543,19 @@ struct PrivacySettingsView: View {
                     .font(.headline)
             }
 
+            // MARK: - Storage
             Section {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Privacy Score")
-                            .font(.system(size: 13, weight: .medium))
-                        Text(privacyScoreDescription)
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                    }
+                PrivacyToggleRow(
+                    title: "Non-Persistent Storage",
+                    description: "Clear non-whitelisted cookies and storage when Barc quits.",
+                    systemImage: "clock.badge.xmark",
+                    isOn: $settings.nonPersistentStorage
+                )
 
-                    Spacer()
-
-                    PrivacyScoreBadge(score: privacyScore, maxScore: maxPrivacyScore)
-                }
-                .padding(.vertical, 4)
-
-                Button("Reset to Recommended Settings") {
-                    showingResetConfirmation = true
-                }
-                .confirmationDialog(
-                    "Reset Privacy Settings?",
-                    isPresented: $showingResetConfirmation,
-                    titleVisibility: .visible
-                ) {
-                    Button("Reset", role: .destructive) {
-                        settings.resetToDefaults()
-                    }
-                    Button("Cancel", role: .cancel) {}
-                } message: {
-                    Text("This will enable all privacy protections.")
-                }
+                // Storage Whitelist
+                StorageWhitelistView(settings: settings, newDomain: $newWhitelistDomain)
             } header: {
-                Label("Overview", systemImage: "chart.bar")
+                Label("Storage", systemImage: "internaldrive")
                     .font(.headline)
             }
         }
