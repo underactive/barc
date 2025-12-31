@@ -400,6 +400,8 @@ struct PrivacySettingsView: View {
             }
 
             Section {
+                JavaScriptToggleRow(settings: settings)
+
                 TrackerBlockingRow(settings: settings)
 
                 PrivacyToggleRow(
@@ -568,7 +570,7 @@ struct PrivacySettingsView: View {
         }
     }
 
-    private var maxPrivacyScore: Int { 19 }
+    private var maxPrivacyScore: Int { 20 }
 
     private var privacyScore: Int {
         var score = 0
@@ -589,6 +591,7 @@ struct PrivacySettingsView: View {
         if settings.thirdPartyCookieBlocking { score += 1 }
         if settings.cookieBannerAutoReject { score += 1 }
         if settings.clipboardAccessBlocking { score += 1 }
+        if !settings.javaScriptEnabled { score += 1 }  // Nuclear option
         if settings.httpsOnlyMode != .off { score += 1 }
         if settings.referrerPolicy != .defaultPolicy { score += 1 }
         return score
@@ -960,6 +963,157 @@ struct CookieBannerRow: View {
             }
             .padding(12)
             .frame(width: 300)
+        }
+    }
+}
+
+struct JavaScriptToggleRow: View {
+    @ObservedObject var settings: PrivacySettings
+    @State private var showingInfo = false
+    @State private var showingConfirmation = false
+
+    var body: some View {
+        Toggle(isOn: Binding(
+            get: { !settings.javaScriptEnabled },
+            set: { newValue in
+                if newValue {
+                    // Show confirmation before disabling JS
+                    showingConfirmation = true
+                } else {
+                    settings.javaScriptEnabled = true
+                }
+            }
+        )) {
+            HStack(spacing: 12) {
+                Image(systemName: "curlybraces")
+                    .font(.system(size: 16))
+                    .foregroundColor(!settings.javaScriptEnabled ? .red : .secondary)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text("Disable JavaScript")
+                            .font(.system(size: 13, weight: .medium))
+                        Text("NUCLEAR")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(
+                                RoundedRectangle(cornerRadius: 3)
+                                    .fill(Color.red)
+                            )
+                    }
+                    HStack(spacing: 0) {
+                        Text("Block all JavaScript execution. ")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                        Button("More info") {
+                            showingInfo = true
+                        }
+                        .font(.system(size: 11))
+                        .buttonStyle(.plain)
+                        .foregroundColor(.accentColor)
+                    }
+                }
+            }
+        }
+        .toggleStyle(.switch)
+        .padding(.vertical, 4)
+        .confirmationDialog(
+            "Disable JavaScript?",
+            isPresented: $showingConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Disable JavaScript", role: .destructive) {
+                settings.javaScriptEnabled = false
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will break most websites. Only enable this if you know what you're doing. Changes take effect for new tabs.")
+        }
+        .popover(isPresented: $showingInfo, arrowEdge: .trailing) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.red)
+                    Text("Nuclear Option")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                Text("Disabling JavaScript provides maximum privacy protection but will break almost all modern websites. Most sites require JavaScript for basic functionality like login forms, navigation menus, and content loading.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Divider()
+
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.green)
+                    Text("What It Blocks")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "All JavaScript execution"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Tracking scripts and analytics"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Fingerprinting scripts"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Malicious scripts and exploits"
+                    )
+                }
+
+                Divider()
+
+                HStack {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.red)
+                    Text("What Breaks")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Login forms and authentication"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Interactive UI elements"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Single-page applications (SPAs)"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Dynamic content loading"
+                    )
+                }
+
+                Divider()
+
+                Text("Recommended: Keep JavaScript enabled and use the other privacy features instead for a better balance of privacy and usability.")
+                    .font(.system(size: 10))
+                    .foregroundColor(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(12)
+            .frame(width: 320)
         }
     }
 }

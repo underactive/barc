@@ -42,9 +42,9 @@ struct WebView: NSViewRepresentable {
         // Always use persistent storage to support whitelist
         configuration.websiteDataStore = .default()
 
-        // Privacy: Disable telemetry and tracking
+        // Privacy: Configure JavaScript (nuclear option when disabled)
         let preferences = WKWebpagePreferences()
-        preferences.allowsContentJavaScript = true
+        preferences.allowsContentJavaScript = settings.javaScriptEnabled
         configuration.defaultWebpagePreferences = preferences
 
         // Content controller with message handler and scripts

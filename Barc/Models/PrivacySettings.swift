@@ -231,6 +231,10 @@ class PrivacySettings: ObservableObject {
         didSet { objectWillChange.send() }
     }
 
+    @AppStorage("privacy.javaScriptEnabled") var javaScriptEnabled: Bool = true {
+        didSet { objectWillChange.send() }
+    }
+
     @AppStorage("privacy.fraudulentWebsiteWarning") var fraudulentWebsiteWarning: Bool = true {
         didSet { objectWillChange.send() }
     }
@@ -351,6 +355,7 @@ class PrivacySettings: ObservableObject {
         thirdPartyCookieBlocking = true
         cookieBannerAutoReject = true
         clipboardAccessBlocking = true
+        javaScriptEnabled = true
         fraudulentWebsiteWarning = true
         httpsOnlyMode = .upgrade
         referrerPolicy = .strictOrigin

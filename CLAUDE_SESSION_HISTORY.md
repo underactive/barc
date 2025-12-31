@@ -223,6 +223,7 @@ open ~/Library/Developer/Xcode/DerivedData/Barc-*/Build/Products/Debug/Barc.app
 25. **Clipboard Access Blocking**: Prevents sites from silently reading clipboard contents
 26. **Settings reorganization**: Moved Non-Persistent Storage and Storage Whitelist to new "Storage" section at top of privacy settings
 27. **Fingerprinting warning dialog**: Shows warning when toggling fingerprinting options that changes take effect for new tabs, with "Don't show again" checkbox
+28. **JavaScript Toggle (Nuclear Option)**: Added ability to completely disable JavaScript for maximum privacy protection
 
 ---
 
@@ -239,7 +240,7 @@ open ~/Library/Developer/Xcode/DerivedData/Barc-*/Build/Products/Debug/Barc.app
 
 ---
 
-*Last updated: December 29, 2024 (Session 3)*
+*Last updated: December 31, 2024 (Session 4)*
 
 ---
 
@@ -411,6 +412,7 @@ When any fingerprinting protection toggle is changed, a dialog appears:
 ### New Components Added
 - `FingerprintWarningDialog` - Custom sheet dialog with "Don't show again" checkbox
 - `FingerprintToggleRow` - Wrapper for fingerprint toggles that triggers warning
+- `JavaScriptToggleRow` - Toggle with confirmation dialog and "More info" popover (nuclear option)
 - `BatteryAPIBlockingRow` - Toggle with "More info" popover
 - `LanguageSpoofingRow` - Toggle with language picker and info popover
 - `TimezoneSpoofingRow` - Toggle with timezone picker and info popover
@@ -422,3 +424,17 @@ When any fingerprinting protection toggle is changed, a dialog appears:
 - `SpoofedLanguage` - Language options (auto, en-US, en-GB, es, fr, de, etc.)
 - `SpoofedTimezone` - Timezone options (auto, UTC, America/New_York, Europe/London, etc.)
 - `SpoofedResolution` - Resolution options (auto, 1920×1080, 1366×768, etc.)
+
+### JavaScript Toggle (Nuclear Option) - Session 4
+Added the ability to completely disable JavaScript execution:
+- **Location**: Settings > Barc Privacy > Content Blocking > "Disable JavaScript"
+- **Default**: Enabled (JavaScript runs normally)
+- **Implementation**: Uses `WKWebpagePreferences.allowsContentJavaScript`
+- **UI Features**:
+  - Red "NUCLEAR" badge next to the toggle label
+  - Confirmation dialog before disabling (warns about breaking websites)
+  - "More info" popover explaining what gets blocked and what breaks
+  - Toggle icon turns red when JavaScript is disabled
+- **Privacy Score**: Disabling JavaScript adds +1 to privacy score (max now 20/20)
+- **Behavior**: Changes take effect for new tabs only (existing tabs keep their JS setting)
+- **Use Case**: Maximum privacy protection for simple HTML sites, or when visiting potentially malicious sites
