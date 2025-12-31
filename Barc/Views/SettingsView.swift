@@ -457,6 +457,8 @@ struct PrivacySettingsView: View {
 
                 CrossSiteTrackingRow(settings: settings)
 
+                SocialWidgetBlockingRow(settings: settings)
+
                 CookieBannerRow(settings: settings)
 
                 ClipboardBlockingRow(settings: settings)
@@ -943,6 +945,97 @@ struct CrossSiteTrackingRow: View {
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+            }
+            .padding(12)
+            .frame(width: 300)
+        }
+    }
+}
+
+struct SocialWidgetBlockingRow: View {
+    @ObservedObject var settings: PrivacySettings
+    @State private var showingInfo = false
+
+    private let blockedWidgets = [
+        "Facebook Like/Share buttons",
+        "Twitter/X embeds & widgets",
+        "LinkedIn share buttons",
+        "Instagram embeds",
+        "Pinterest pins",
+        "Google+ buttons",
+        "AddThis/AddToAny/ShareThis"
+    ]
+
+    var body: some View {
+        Toggle(isOn: $settings.socialWidgetBlocking) {
+            HStack(spacing: 12) {
+                Image(systemName: "person.2.slash")
+                    .font(.system(size: 16))
+                    .foregroundColor(settings.socialWidgetBlocking ? .accentColor : .secondary)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Social Widget Blocking")
+                        .font(.system(size: 13, weight: .medium))
+                    HStack(spacing: 0) {
+                        Text("Block Like buttons, embeds, and share widgets. ")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                        Button("More info") {
+                            showingInfo = true
+                        }
+                        .font(.system(size: 11))
+                        .buttonStyle(.plain)
+                        .foregroundColor(.accentColor)
+                    }
+                }
+            }
+        }
+        .toggleStyle(.switch)
+        .padding(.vertical, 4)
+        .popover(isPresented: $showingInfo, arrowEdge: .trailing) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "person.2.slash")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("Social Widget Blocking")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                Text("Social media widgets like Facebook Like buttons and Twitter embeds can track you across websites, even if you don't click them. Blocking these widgets prevents this passive tracking.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Divider()
+
+                HStack {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.red)
+                    Text("Blocked Widgets")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(blockedWidgets, id: \.self) { widget in
+                        HStack(spacing: 8) {
+                            Image(systemName: "xmark.circle")
+                                .font(.system(size: 10))
+                                .foregroundColor(.red.opacity(0.7))
+                            Text(widget)
+                                .font(.system(size: 11))
+                        }
+                    }
+                }
+
+                Divider()
+
+                Text("Note: This may hide social sharing buttons on some websites. The underlying content will still be accessible by visiting the social media sites directly.")
+                    .font(.system(size: 10))
+                    .foregroundColor(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(12)
             .frame(width: 300)

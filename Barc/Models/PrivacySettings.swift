@@ -243,6 +243,10 @@ class PrivacySettings: ObservableObject {
         didSet { objectWillChange.send() }
     }
 
+    @AppStorage("privacy.socialWidgetBlocking") var socialWidgetBlocking: Bool = true {
+        didSet { objectWillChange.send() }
+    }
+
     @AppStorage("privacy.fraudulentWebsiteWarning") var fraudulentWebsiteWarning: Bool = true {
         didSet { objectWillChange.send() }
     }
@@ -343,7 +347,7 @@ class PrivacySettings: ObservableObject {
     // MARK: - Privacy Score (Single Source of Truth)
 
     /// Maximum privacy score (excluding nuclear options like JS disable)
-    static let maxPrivacyScore: Int = 21
+    static let maxPrivacyScore: Int = 22
 
     /// Current privacy score based on enabled protections
     var privacyScore: Int {
@@ -367,6 +371,7 @@ class PrivacySettings: ObservableObject {
         if clipboardAccessBlocking { score += 1 }
         if blockMediaAutoplay { score += 1 }
         if crossSiteTrackingPrevention { score += 1 }
+        if socialWidgetBlocking { score += 1 }
         if httpsOnlyMode != .off { score += 1 }
         if referrerPolicy != .defaultPolicy { score += 1 }
         // Note: javaScriptEnabled is intentionally excluded (nuclear option)
@@ -434,6 +439,7 @@ class PrivacySettings: ObservableObject {
         javaScriptEnabled = true
         blockMediaAutoplay = true
         crossSiteTrackingPrevention = true
+        socialWidgetBlocking = true
         fraudulentWebsiteWarning = true
         httpsOnlyMode = .upgrade
         referrerPolicy = .strictOrigin

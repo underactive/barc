@@ -190,6 +190,136 @@ struct WebView: NSViewRepresentable {
             }
         }
 
+        // Privacy: Social Widget Blocking (Facebook Like, Twitter embeds, etc.)
+        if settings.socialWidgetBlocking {
+            let socialWidgetRules = """
+            [
+                {
+                    "trigger": {
+                        "url-filter": ".*\\\\.facebook\\\\.com/(plugins|connect|share|sharer|like).*",
+                        "load-type": ["third-party"]
+                    },
+                    "action": {
+                        "type": "block"
+                    }
+                },
+                {
+                    "trigger": {
+                        "url-filter": ".*connect\\\\.facebook\\\\.net.*",
+                        "load-type": ["third-party"]
+                    },
+                    "action": {
+                        "type": "block"
+                    }
+                },
+                {
+                    "trigger": {
+                        "url-filter": ".*platform\\\\.twitter\\\\.com/widgets.*",
+                        "load-type": ["third-party"]
+                    },
+                    "action": {
+                        "type": "block"
+                    }
+                },
+                {
+                    "trigger": {
+                        "url-filter": ".*syndication\\\\.twitter\\\\.com.*",
+                        "load-type": ["third-party"]
+                    },
+                    "action": {
+                        "type": "block"
+                    }
+                },
+                {
+                    "trigger": {
+                        "url-filter": ".*platform\\\\.linkedin\\\\.com.*",
+                        "load-type": ["third-party"]
+                    },
+                    "action": {
+                        "type": "block"
+                    }
+                },
+                {
+                    "trigger": {
+                        "url-filter": ".*apis\\\\.google\\\\.com/js/plusone.*",
+                        "load-type": ["third-party"]
+                    },
+                    "action": {
+                        "type": "block"
+                    }
+                },
+                {
+                    "trigger": {
+                        "url-filter": ".*platform\\\\.instagram\\\\.com.*",
+                        "load-type": ["third-party"]
+                    },
+                    "action": {
+                        "type": "block"
+                    }
+                },
+                {
+                    "trigger": {
+                        "url-filter": ".*assets\\\\.pinterest\\\\.com.*",
+                        "load-type": ["third-party"]
+                    },
+                    "action": {
+                        "type": "block"
+                    }
+                },
+                {
+                    "trigger": {
+                        "url-filter": ".*static\\\\.addtoany\\\\.com.*",
+                        "load-type": ["third-party"]
+                    },
+                    "action": {
+                        "type": "block"
+                    }
+                },
+                {
+                    "trigger": {
+                        "url-filter": ".*s7\\\\.addthis\\\\.com.*",
+                        "load-type": ["third-party"]
+                    },
+                    "action": {
+                        "type": "block"
+                    }
+                },
+                {
+                    "trigger": {
+                        "url-filter": ".*platform-api\\\\.sharethis\\\\.com.*",
+                        "load-type": ["third-party"]
+                    },
+                    "action": {
+                        "type": "block"
+                    }
+                },
+                {
+                    "trigger": {
+                        "url-filter": ".*connect\\\\.facebook\\\\.net/.*sdk.*",
+                        "load-type": ["third-party"]
+                    },
+                    "action": {
+                        "type": "block"
+                    }
+                }
+            ]
+            """
+
+            WKContentRuleListStore.default().compileContentRuleList(
+                forIdentifier: "socialWidgetBlocking",
+                encodedContentRuleList: socialWidgetRules
+            ) { ruleList, error in
+                if let ruleList = ruleList {
+                    DispatchQueue.main.async {
+                        configuration.userContentController.add(ruleList)
+                    }
+                    print("[Barc] Social widget blocking enabled")
+                } else if let error = error {
+                    print("[Barc] Failed to compile social widget rules: \(error)")
+                }
+            }
+        }
+
         return configuration
     }
 
