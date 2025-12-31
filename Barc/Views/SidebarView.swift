@@ -29,16 +29,6 @@ struct SidebarView: View {
             Divider()
                 .padding(.horizontal, 12)
 
-            // Downloads section (only shown when there are downloads)
-            if !downloadManager.downloads.isEmpty {
-                DownloadsSidebarSection()
-                    .padding(.top, 4)
-
-                Divider()
-                    .padding(.horizontal, 12)
-                    .padding(.top, 4)
-            }
-
             // Tabs list
             ScrollView {
                 VStack(spacing: 2) {
@@ -74,6 +64,16 @@ struct SidebarView: View {
             }
 
             Spacer()
+
+            // Downloads section (only shown when there are downloads)
+            if !downloadManager.downloads.isEmpty {
+                Divider()
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 4)
+
+                DownloadsSidebarSection()
+                    .padding(.bottom, 8)
+            }
         }
         .frame(width: 220)
         .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
