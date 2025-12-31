@@ -1557,120 +1557,121 @@ struct WebView: NSViewRepresentable {
         controller.addUserScript(script)
     }
 
-    // MARK: - Video Detection Script for Download Context Menu
+    // MARK: - Video Detection Script for Download Button
 
     private func injectVideoDetectionScript(into controller: WKUserContentController) {
         let script = """
         (function() {
-            if (window.__barcVideoDownloadInstalled) return;
-            window.__barcVideoDownloadInstalled = true;
+            if (window.__barcVideoDetectionInstalled) return;
+            window.__barcVideoDetectionInstalled = true;
 
-            // Detect video elements on right-click
-            document.addEventListener('contextmenu', function(e) {
-                let videoInfo = null;
-                let target = e.target;
+            // Check if the current page has downloadable videos
+            function detectVideos() {
+                const hostname = window.location.hostname;
+                const pathname = window.location.pathname;
+                let hasVideo = false;
 
-                // Check if clicking directly on a video element
-                if (target.tagName === 'VIDEO') {
-                    videoInfo = {
-                        type: 'video',
-                        src: target.currentSrc || target.src,
-                        pageUrl: window.location.href,
-                        pageTitle: document.title
-                    };
+                // YouTube video pages
+                if ((hostname.includes('youtube.com') || hostname.includes('youtu.be')) &&
+                    (pathname.includes('/watch') || pathname.includes('/shorts') || hostname.includes('youtu.be'))) {
+                    hasVideo = true;
                 }
 
-                // Check if on a YouTube page or clicking near YouTube player
-                if (!videoInfo && (
-                    window.location.hostname.includes('youtube.com') ||
-                    window.location.hostname.includes('youtu.be') ||
-                    target.closest('iframe[src*="youtube.com"]') ||
-                    target.closest('iframe[src*="youtu.be"]') ||
-                    target.closest('#movie_player') ||
-                    target.closest('.html5-video-player') ||
-                    target.closest('ytd-player')
-                )) {
-                    videoInfo = {
-                        type: 'youtube',
-                        pageUrl: window.location.href,
-                        pageTitle: document.title
-                    };
+                // Vimeo video pages
+                if (hostname.includes('vimeo.com') && /^\\/\\d+/.test(pathname)) {
+                    hasVideo = true;
                 }
 
-                // Check if on a Vimeo page or clicking near Vimeo player
-                if (!videoInfo && (
-                    window.location.hostname.includes('vimeo.com') ||
-                    target.closest('iframe[src*="vimeo.com"]') ||
-                    target.closest('.vp-video-wrapper')
-                )) {
-                    videoInfo = {
-                        type: 'vimeo',
-                        pageUrl: window.location.href,
-                        pageTitle: document.title
-                    };
+                // Twitter/X with video
+                if ((hostname.includes('twitter.com') || hostname.includes('x.com')) &&
+                    pathname.includes('/status')) {
+                    hasVideo = true;
                 }
 
-                // Check if on Twitter/X video
-                if (!videoInfo && (
-                    window.location.hostname.includes('twitter.com') ||
-                    window.location.hostname.includes('x.com') ||
-                    target.closest('[data-testid="videoComponent"]') ||
-                    target.closest('[data-testid="videoPlayer"]')
-                )) {
-                    videoInfo = {
-                        type: 'twitter',
-                        pageUrl: window.location.href,
-                        pageTitle: document.title
-                    };
+                // TikTok video pages
+                if (hostname.includes('tiktok.com') && pathname.includes('/video')) {
+                    hasVideo = true;
                 }
 
-                // Check if on TikTok
-                if (!videoInfo && (
-                    window.location.hostname.includes('tiktok.com') ||
-                    target.closest('.tiktok-web-player')
-                )) {
-                    videoInfo = {
-                        type: 'tiktok',
-                        pageUrl: window.location.href,
-                        pageTitle: document.title
-                    };
+                // Twitch video/clip pages
+                if (hostname.includes('twitch.tv') &&
+                    (pathname.includes('/videos') || pathname.includes('/clip'))) {
+                    hasVideo = true;
                 }
 
-                // Check for generic video players
-                if (!videoInfo && (
-                    target.closest('[class*="video-player"]') ||
-                    target.closest('[class*="html5-video"]') ||
-                    target.closest('[class*="jw-video"]') ||
-                    target.closest('[class*="plyr"]') ||
-                    target.closest('[class*="video-js"]')
-                )) {
-                    videoInfo = {
-                        type: 'player',
-                        pageUrl: window.location.href,
-                        pageTitle: document.title
-                    };
+                // Reddit video posts
+                if (hostname.includes('reddit.com') && pathname.includes('/comments')) {
+                    // Check for video element
+                    if (document.querySelector('video, [data-testid="post-video"]')) {
+                        hasVideo = true;
+                    }
                 }
 
-                // If video detected, send message to Swift with coordinates
-                if (videoInfo) {
-                    window.__barcDetectedVideo = videoInfo;
-                    window.webkit.messageHandlers.barcVideoDownload.postMessage({
-                        action: 'videoDetected',
-                        ...videoInfo,
-                        x: e.clientX,
-                        y: e.clientY,
-                        screenX: e.screenX,
-                        screenY: e.screenY
-                    });
+                // Instagram video/reel
+                if (hostname.includes('instagram.com') &&
+                    (pathname.includes('/reel') || pathname.includes('/p/'))) {
+                    hasVideo = true;
                 }
-            }, true);
+
+                // Facebook video
+                if (hostname.includes('facebook.com') &&
+                    (pathname.includes('/watch') || pathname.includes('/videos') || pathname.includes('/reel'))) {
+                    hasVideo = true;
+                }
+
+                // Dailymotion
+                if (hostname.includes('dailymotion.com') && pathname.includes('/video')) {
+                    hasVideo = true;
+                }
+
+                // Generic: check for HTML5 video elements with src
+                if (!hasVideo) {
+                    const videos = document.querySelectorAll('video[src], video source[src]');
+                    if (videos.length > 0) {
+                        hasVideo = true;
+                    }
+                }
+
+                // Generic: check for embedded video iframes
+                if (!hasVideo) {
+                    const iframes = document.querySelectorAll('iframe[src*="youtube"], iframe[src*="vimeo"], iframe[src*="dailymotion"]');
+                    if (iframes.length > 0) {
+                        hasVideo = true;
+                    }
+                }
+
+                // Send result to Swift
+                window.webkit.messageHandlers.barcVideoDownload.postMessage({
+                    action: 'videoStatusUpdate',
+                    hasVideo: hasVideo,
+                    pageUrl: window.location.href,
+                    pageTitle: document.title
+                });
+            }
+
+            // Run detection on page load
+            detectVideos();
+
+            // Re-run on URL changes (for SPAs like YouTube)
+            let lastUrl = window.location.href;
+            const urlObserver = new MutationObserver(() => {
+                if (window.location.href !== lastUrl) {
+                    lastUrl = window.location.href;
+                    setTimeout(detectVideos, 500); // Delay to let page update
+                }
+            });
+            urlObserver.observe(document.body, { childList: true, subtree: true });
+
+            // Also re-run after a delay to catch dynamically loaded content
+            setTimeout(detectVideos, 1500);
+            setTimeout(detectVideos, 3000);
         })();
         """
 
         let userScript = WKUserScript(
             source: script,
             injectionTime: .atDocumentEnd,
-            forMainFrameOnly: false
+            forMainFrameOnly: true
         )
         controller.addUserScript(userScript)
     }
@@ -1723,55 +1724,14 @@ struct WebView: NSViewRepresentable {
             if message.name == WebView.videoDownloadMessageHandler,
                let body = message.body as? [String: Any],
                let action = body["action"] as? String {
-                if action == "videoDetected" {
-                    let x = body["x"] as? CGFloat ?? 0
-                    let y = body["y"] as? CGFloat ?? 0
-                    let pageUrl = body["pageUrl"] as? String ?? ""
-                    let pageTitle = body["pageTitle"] as? String ?? "Video"
+                if action == "videoStatusUpdate" {
+                    let hasVideo = body["hasVideo"] as? Bool ?? false
 
                     DispatchQueue.main.async { [weak self] in
-                        self?.showVideoDownloadContextMenu(
-                            at: NSPoint(x: x, y: y),
-                            pageUrl: pageUrl,
-                            pageTitle: pageTitle
-                        )
+                        self?.tab.hasDownloadableVideo = hasVideo
                     }
                 }
             }
-        }
-
-        // MARK: - Video Download Context Menu
-
-        private func showVideoDownloadContextMenu(at viewPoint: NSPoint, pageUrl: String, pageTitle: String) {
-            guard let url = URL(string: pageUrl) else { return }
-            guard let webView = tab.webView else { return }
-
-            let menu = NSMenu()
-
-            let downloadItem = NSMenuItem(
-                title: "Download Video",
-                action: #selector(downloadVideoAction(_:)),
-                keyEquivalent: ""
-            )
-            downloadItem.representedObject = ["url": url, "title": pageTitle]
-            downloadItem.target = self
-            downloadItem.image = NSImage(systemSymbolName: "arrow.down.circle", accessibilityDescription: nil)
-            menu.addItem(downloadItem)
-
-            // The viewPoint is in WKWebView coordinates (origin at top-left)
-            // NSView uses origin at bottom-left, so we need to flip the Y coordinate
-            let flippedY = webView.bounds.height - viewPoint.y
-            let menuLocation = NSPoint(x: viewPoint.x, y: flippedY)
-
-            menu.popUp(positioning: nil, at: menuLocation, in: webView)
-        }
-
-        @objc private func downloadVideoAction(_ sender: NSMenuItem) {
-            guard let info = sender.representedObject as? [String: Any],
-                  let url = info["url"] as? URL,
-                  let title = info["title"] as? String else { return }
-
-            DownloadManager.shared.startDownload(url: url, pageTitle: title)
         }
 
         func setupObservers(for webView: WKWebView) {

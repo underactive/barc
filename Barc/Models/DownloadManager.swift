@@ -16,6 +16,63 @@ private extension Optional where Wrapped == String {
     }
 }
 
+// MARK: - Video Format Options
+
+enum VideoFormat: String, CaseIterable, Identifiable {
+    case best = "best"
+    case mp4 = "mp4"
+    case quality720p = "720p"
+    case quality480p = "480p"
+    case audioOnly = "audio"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .best: return "Best Quality"
+        case .mp4: return "MP4"
+        case .quality720p: return "720p"
+        case .quality480p: return "480p"
+        case .audioOnly: return "Audio Only"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .best: return "Original format, no re-encoding"
+        case .mp4: return "Converts to MP4 for compatibility"
+        case .quality720p: return "Smaller file, good for mobile"
+        case .quality480p: return "Smallest file, lower quality"
+        case .audioOnly: return "Extract audio as MP3"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .best: return "star.fill"
+        case .mp4: return "film"
+        case .quality720p: return "rectangle.on.rectangle"
+        case .quality480p: return "rectangle"
+        case .audioOnly: return "music.note"
+        }
+    }
+
+    var ytdlpArguments: [String] {
+        switch self {
+        case .best:
+            return []  // Default behavior
+        case .mp4:
+            return ["-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best", "--merge-output-format", "mp4"]
+        case .quality720p:
+            return ["-f", "bestvideo[height<=720]+bestaudio/best[height<=720]/best"]
+        case .quality480p:
+            return ["-f", "bestvideo[height<=480]+bestaudio/best[height<=480]/best"]
+        case .audioOnly:
+            return ["-x", "--audio-format", "mp3", "--audio-quality", "0"]
+        }
+    }
+}
+
 class DownloadManager: ObservableObject {
     static let shared = DownloadManager()
 
@@ -36,8 +93,8 @@ class DownloadManager: ObservableObject {
     // MARK: - Public Methods
 
     @discardableResult
-    func startDownload(url: URL, pageTitle: String) -> Download {
-        let download = Download(url: url, pageTitle: pageTitle)
+    func startDownload(url: URL, pageTitle: String, format: VideoFormat = .best) -> Download {
+        let download = Download(url: url, pageTitle: pageTitle, format: format)
 
         DispatchQueue.main.async {
             self.downloads.insert(download, at: 0)
@@ -139,16 +196,23 @@ class DownloadManager: ObservableObject {
         )
 
         // yt-dlp arguments for progress tracking
-        process.arguments = [
+        var arguments = [
             "--no-playlist",  // Only download the single video, not entire playlist
             "--newline",
             "--no-warnings",
             "--progress",
             "-o", "\(outputDir)/%(title)s.%(ext)s",
             "--print", "before_dl:TITLE:%(title)s",
-            "--print", "after_video:FILEPATH:%(filepath)s",
-            download.url.absoluteString
+            "--print", "after_video:FILEPATH:%(filepath)s"
         ]
+
+        // Add format-specific arguments
+        arguments.append(contentsOf: download.format.ytdlpArguments)
+
+        // Add the URL last
+        arguments.append(download.url.absoluteString)
+
+        process.arguments = arguments
 
         let outputPipe = Pipe()
         let errorPipe = Pipe()

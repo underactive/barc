@@ -10,6 +10,7 @@ struct AddressBarView: View {
     @State private var inputText: String = ""
     @State private var isEditing: Bool = false
     @State private var showingPrivacyPopover: Bool = false
+    @State private var showingDownloadPopover: Bool = false
     @FocusState private var isFocused: Bool
 
     // Privacy score helpers (delegate to PrivacySettings single source of truth)
@@ -129,6 +130,27 @@ struct AddressBarView: View {
                     .padding(.horizontal, 1)
                     .offset(y: 1)
                 }
+            }
+
+            // Video download button
+            Button(action: { showingDownloadPopover.toggle() }) {
+                Image(systemName: "arrow.down.circle")
+                    .font(.system(size: 14))
+                    .foregroundColor(browserState.selectedTab?.hasDownloadableVideo == true ? .accentColor : .secondary.opacity(0.3))
+            }
+            .buttonStyle(.plain)
+            .disabled(browserState.selectedTab?.hasDownloadableVideo != true)
+            .help(browserState.selectedTab?.hasDownloadableVideo == true ? "Download video from this page" : "No downloadable video detected")
+            .popover(isPresented: $showingDownloadPopover, arrowEdge: .bottom) {
+                VideoDownloadMenu(
+                    videoTitle: browserState.selectedTab?.title ?? "Video",
+                    onDownload: { format in
+                        showingDownloadPopover = false
+                        guard let tab = browserState.selectedTab,
+                              let url = tab.url else { return }
+                        DownloadManager.shared.startDownload(url: url, pageTitle: tab.title, format: format)
+                    }
+                )
             }
 
             // Element picker (xkill) button
@@ -743,6 +765,78 @@ struct NetworkIndicator: View {
                 .foregroundColor(isActive ? activeColor : .secondary.opacity(0.5))
                 .animation(.easeInOut(duration: 0.1), value: isActive)
         }
+    }
+}
+
+// MARK: - Video Download Menu
+
+struct VideoDownloadMenu: View {
+    let videoTitle: String
+    let onDownload: (VideoFormat) -> Void
+
+    private var truncatedTitle: String {
+        if videoTitle.count > 40 {
+            return String(videoTitle.prefix(37)) + "..."
+        }
+        return videoTitle
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 4) {
+                Text("Download")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.secondary)
+                Text(truncatedTitle)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.accentColor)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+            .padding(.bottom, 4)
+
+            Divider()
+                .padding(.horizontal, 8)
+
+            ForEach(VideoFormat.allCases) { format in
+                Button(action: { onDownload(format) }) {
+                    HStack(spacing: 10) {
+                        Image(systemName: format.icon)
+                            .font(.system(size: 12))
+                            .foregroundColor(.accentColor)
+                            .frame(width: 16)
+
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(format.displayName)
+                                .font(.system(size: 13))
+                            Text(format.description)
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
+                        }
+
+                        Spacer()
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.primary.opacity(0.001))
+                )
+                .onHover { hovering in
+                    if hovering {
+                        NSCursor.pointingHand.push()
+                    } else {
+                        NSCursor.pop()
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 4)
+        .frame(width: 260)
     }
 }
 

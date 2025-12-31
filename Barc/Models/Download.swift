@@ -20,6 +20,7 @@ class Download: Identifiable, ObservableObject {
     let id = UUID()
     let url: URL                              // Original video page URL
     let sourceTitle: String                   // Page title when download started
+    let format: VideoFormat                   // Requested format/quality
     let startedAt: Date
 
     @Published var title: String              // Video title (from yt-dlp)
@@ -35,9 +36,10 @@ class Download: Identifiable, ObservableObject {
 
     var completedAt: Date?
 
-    init(url: URL, pageTitle: String) {
+    init(url: URL, pageTitle: String, format: VideoFormat = .best) {
         self.url = url
         self.sourceTitle = pageTitle
+        self.format = format
         self.title = pageTitle  // Will be updated by yt-dlp
         self.startedAt = Date()
     }

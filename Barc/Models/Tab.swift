@@ -11,6 +11,7 @@ class Tab: Identifiable, ObservableObject {
     @Published var canGoBack: Bool = false
     @Published var canGoForward: Bool = false
     @Published var estimatedProgress: Double = 0
+    @Published var hasDownloadableVideo: Bool = false  // True if page has videos that can be downloaded
 
     weak var webView: WKWebView?
 
