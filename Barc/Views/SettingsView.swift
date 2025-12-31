@@ -414,7 +414,7 @@ struct PrivacySettingsView: View {
                 PrivacyToggleRow(
                     title: "Tracking Pixel Blocking",
                     description: "Block invisible 1x1 pixel images used for email and web tracking.",
-                    systemImage: "photo.badge.minus",
+                    systemImage: "eye.slash.circle",
                     isOn: $settings.trackingPixelBlocking
                 )
 
@@ -428,7 +428,7 @@ struct PrivacySettingsView: View {
                 PrivacyToggleRow(
                     title: "Third-Party Cookie Blocking",
                     description: "Block cookies from domains other than the site you're visiting.",
-                    systemImage: "cookie",
+                    systemImage: "circle.slash",
                     isOn: $settings.thirdPartyCookieBlocking
                 )
 
@@ -654,7 +654,7 @@ struct StorageWhitelistView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 12) {
-                Image(systemName: "list.badge.ellipsis")
+                Image(systemName: "list.bullet.rectangle")
                     .font(.system(size: 16))
                     .foregroundColor(.accentColor)
                     .frame(width: 24)
