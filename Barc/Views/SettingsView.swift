@@ -192,16 +192,23 @@ struct GeneralSettingsView: View {
                     }
                     .toggleStyle(.switch)
 
-                    Toggle(isOn: $settings.showLoadingThrobber) {
+                    HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Show loading throbber")
+                            Text("Loading throbber")
                                 .font(.system(size: 13))
                             Text("Display a retro animated throbber while pages load.")
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                         }
+                        Spacer()
+                        Picker("", selection: $settings.throbberSize) {
+                            ForEach(PrivacySettings.ThrobberSize.allCases, id: \.self) { size in
+                                Text(size.displayName).tag(size)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 100)
                     }
-                    .toggleStyle(.switch)
                 }
                 .padding(.leading, 12)
 

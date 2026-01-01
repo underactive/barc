@@ -207,10 +207,10 @@ struct AddressBarView: View {
             }
 
             // Netscape-style throbber
-            if privacySettings.showLoadingThrobber {
+            if privacySettings.throbberSize.isEnabled {
                 let isPageLoading = (browserState.selectedTab?.isLoading ?? false) || (browserState.selectedTab?.isRendering ?? false)
                 let hasNetworkActivity = browserState.selectedTabId.map { networkMonitor.transmittingTabIds.contains($0) || networkMonitor.receivingTabIds.contains($0) } ?? false
-                NetscapeThrobberView(isLoading: isPageLoading || hasNetworkActivity)
+                NetscapeThrobberView(isLoading: isPageLoading || hasNetworkActivity, scale: privacySettings.throbberSize.scale)
             }
         }
         .padding(.horizontal, 16)
@@ -520,6 +520,8 @@ struct NetscapeThrobberView: View {
         (0.60, 0.40, 1.0), (0.35, 0.20, 1.5), (0.65, 0.95, 1.0),
     ]
 
+    var scale: CGFloat = 1.0
+
     // Meteor animation state
     @State private var meteorOffset: CGFloat = -0.3
     @State private var meteor2Offset: CGFloat = -0.5
@@ -530,7 +532,7 @@ struct NetscapeThrobberView: View {
     var body: some View {
         ZStack {
             // Dark space background
-            RoundedRectangle(cornerRadius: 4)
+            RoundedRectangle(cornerRadius: 4 * scale)
                 .fill(
                     LinearGradient(
                         colors: [
@@ -562,7 +564,7 @@ struct NetscapeThrobberView: View {
                 GeometryReader { geo in
                     // Main meteor
                     MeteorView()
-                        .frame(width: 12, height: 3)
+                        .frame(width: 12 * scale, height: 3 * scale)
                         .position(
                             x: geo.size.width * meteorOffset,
                             y: geo.size.height * (0.3 + meteorOffset * 0.4)
@@ -570,7 +572,7 @@ struct NetscapeThrobberView: View {
 
                     // Second meteor (smaller, different path)
                     MeteorView()
-                        .frame(width: 8, height: 2)
+                        .frame(width: 8 * scale, height: 2 * scale)
                         .opacity(0.7)
                         .position(
                             x: geo.size.width * meteor2Offset,
@@ -579,7 +581,7 @@ struct NetscapeThrobberView: View {
 
                     // Third meteor
                     MeteorView()
-                        .frame(width: 6, height: 2)
+                        .frame(width: 6 * scale, height: 2 * scale)
                         .opacity(0.5)
                         .position(
                             x: geo.size.width * meteor3Offset,
@@ -590,7 +592,7 @@ struct NetscapeThrobberView: View {
 
             // The "B" letter
             Text("B")
-                .font(.system(size: 16, weight: .bold, design: .serif))
+                .font(.system(size: 16 * scale, weight: .bold, design: .serif))
                 .foregroundStyle(
                     LinearGradient(
                         colors: [
@@ -605,10 +607,10 @@ struct NetscapeThrobberView: View {
                 .shadow(color: Color.cyan.opacity(0.5), radius: 2, x: 0, y: 0)
                 .shadow(color: Color.black, radius: 1, x: 1, y: 1)
         }
-        .frame(width: 28, height: 28)
-        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .frame(width: 28 * scale, height: 28 * scale)
+        .clipShape(RoundedRectangle(cornerRadius: 4 * scale))
         .overlay(
-            RoundedRectangle(cornerRadius: 4)
+            RoundedRectangle(cornerRadius: 4 * scale)
                 .strokeBorder(Color.gray.opacity(0.3), lineWidth: 0.5)
         )
         .onChange(of: isLoading) { _, newValue in
