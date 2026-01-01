@@ -1,5 +1,7 @@
 import SwiftUI
 import WebKit
+import UniformTypeIdentifiers
+import PDFKit
 
 // MARK: - Custom WKWebView with Context Menu
 
@@ -19,7 +21,151 @@ class BarcWebView: WKWebView {
         viewSourceItem.target = self
         menu.addItem(viewSourceItem)
 
+        // Add "Save Page As..." menu item
+        let savePageItem = NSMenuItem(
+            title: "Save Page As...",
+            action: #selector(savePageAs),
+            keyEquivalent: ""
+        )
+        savePageItem.target = self
+        menu.addItem(savePageItem)
+
         super.willOpenMenu(menu, with: event)
+    }
+
+    private var currentSavePanel: NSSavePanel?
+
+    @objc private func savePageAs() {
+        let savePanel = NSSavePanel()
+        self.currentSavePanel = savePanel
+        savePanel.title = "Save Page As"
+        savePanel.nameFieldStringValue = (self.title ?? "Untitled") + ".webarchive"
+
+        // Create format popup
+        let accessoryView = NSView(frame: NSRect(x: 0, y: 0, width: 300, height: 32))
+        let label = NSTextField(labelWithString: "Format:")
+        label.frame = NSRect(x: 0, y: 6, width: 50, height: 20)
+        accessoryView.addSubview(label)
+
+        let formatPopup = NSPopUpButton(frame: NSRect(x: 55, y: 2, width: 240, height: 28))
+        formatPopup.addItems(withTitles: ["Web Archive", "Page Source", "PNG Image (Full Page)"])
+        formatPopup.target = self
+        formatPopup.action = #selector(formatChanged(_:))
+        accessoryView.addSubview(formatPopup)
+
+        savePanel.accessoryView = accessoryView
+        savePanel.allowedContentTypes = [.webArchive]
+        savePanel.isExtensionHidden = false
+
+        savePanel.beginSheetModal(for: self.window!) { [weak self] response in
+            guard response == .OK, let url = savePanel.url, let self = self else { return }
+
+            let selectedIndex = formatPopup.indexOfSelectedItem
+
+            switch selectedIndex {
+            case 0: // Web Archive
+                self.createWebArchiveData { result in
+                    switch result {
+                    case .success(let data):
+                        do {
+                            try data.write(to: url)
+                        } catch {
+                            print("[Barc] Failed to save web archive: \(error)")
+                        }
+                    case .failure(let error):
+                        print("[Barc] Failed to create web archive: \(error)")
+                    }
+                }
+            case 1: // Page Source
+                self.evaluateJavaScript("document.documentElement.outerHTML") { result, error in
+                    if let html = result as? String {
+                        do {
+                            try html.write(to: url, atomically: true, encoding: .utf8)
+                        } catch {
+                            print("[Barc] Failed to save page source: \(error)")
+                        }
+                    }
+                }
+            case 2: // PNG Full Page
+                self.captureFullPage { image in
+                    guard let image = image else {
+                        print("[Barc] Failed to capture full page")
+                        return
+                    }
+                    if let tiffData = image.tiffRepresentation,
+                       let bitmap = NSBitmapImageRep(data: tiffData),
+                       let pngData = bitmap.representation(using: .png, properties: [:]) {
+                        do {
+                            try pngData.write(to: url)
+                        } catch {
+                            print("[Barc] Failed to save PNG: \(error)")
+                        }
+                    }
+                }
+            default:
+                break
+            }
+        }
+    }
+
+    private func captureFullPage(completion: @escaping (NSImage?) -> Void) {
+        // Use PDF for full page capture, then convert to image
+        let config = WKPDFConfiguration()
+
+        createPDF(configuration: config) { result in
+            switch result {
+            case .success(let pdfData):
+                // Convert PDF to image
+                guard let pdfDoc = PDFDocument(data: pdfData),
+                      let pdfPage = pdfDoc.page(at: 0) else {
+                    completion(nil)
+                    return
+                }
+
+                let pageRect = pdfPage.bounds(for: .mediaBox)
+                let scale: CGFloat = 2.0 // Retina quality
+                let imageSize = NSSize(width: pageRect.width * scale, height: pageRect.height * scale)
+
+                let image = NSImage(size: imageSize)
+                image.lockFocus()
+
+                if let context = NSGraphicsContext.current?.cgContext {
+                    context.setFillColor(NSColor.white.cgColor)
+                    context.fill(CGRect(origin: .zero, size: imageSize))
+                    context.scaleBy(x: scale, y: scale)
+                    pdfPage.draw(with: .mediaBox, to: context)
+                }
+
+                image.unlockFocus()
+                completion(image)
+
+            case .failure(let error):
+                print("[Barc] PDF creation error: \(error)")
+                completion(nil)
+            }
+        }
+    }
+
+    @objc private func formatChanged(_ sender: NSPopUpButton) {
+        guard let savePanel = currentSavePanel else { return }
+
+        // Get current filename without extension
+        let currentName = savePanel.nameFieldStringValue
+        let baseName = (currentName as NSString).deletingPathExtension
+
+        switch sender.indexOfSelectedItem {
+        case 0:
+            savePanel.allowedContentTypes = [.webArchive]
+            savePanel.nameFieldStringValue = baseName + ".webarchive"
+        case 1:
+            savePanel.allowedContentTypes = [.html]
+            savePanel.nameFieldStringValue = baseName + ".html"
+        case 2:
+            savePanel.allowedContentTypes = [.png]
+            savePanel.nameFieldStringValue = baseName + ".png"
+        default:
+            break
+        }
     }
 
     @objc private func viewPageSource() {
