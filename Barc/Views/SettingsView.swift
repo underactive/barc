@@ -207,7 +207,7 @@ struct GeneralSettingsView: View {
                             }
                         }
                         .pickerStyle(.menu)
-                        .frame(width: 100)
+                        .frame(width: 120)
                     }
                 }
                 .padding(.leading, 12)
