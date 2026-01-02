@@ -454,8 +454,8 @@ struct NetworkIndicatorsMenu: View {
     var body: some View {
         Button(action: { showingPopover.toggle() }) {
             HStack(spacing: 6) {
-                NetworkIndicator(label: "Tx", isActive: showTxIndicator, activeColor: .red)
-                NetworkIndicator(label: "Rx", isActive: showRxIndicator, activeColor: .green)
+                NetworkIndicator(label: "SD", isActive: showTxIndicator, activeColor: .red)
+                NetworkIndicator(label: "RD", isActive: showRxIndicator, activeColor: .green)
             }
             .padding(.horizontal, 4)
             .padding(.vertical, 2)
@@ -477,7 +477,7 @@ struct NetworkIndicatorsMenu: View {
                 Divider()
 
                 HStack {
-                    Label("Rx (Receive)", systemImage: "arrow.down.circle")
+                    Label("Receive Data", systemImage: "arrow.down.circle")
                         .lineLimit(1)
                     Spacer()
                     Toggle("", isOn: $soundManager.rxEnabled)
@@ -489,7 +489,7 @@ struct NetworkIndicatorsMenu: View {
                 .opacity(soundManager.isEnabled ? 1.0 : 0.5)
 
                 HStack {
-                    Label("Tx (Transmit)", systemImage: "arrow.up.circle")
+                    Label("Send Data", systemImage: "arrow.up.circle")
                         .lineLimit(1)
                     Spacer()
                     Toggle("", isOn: $soundManager.txEnabled)

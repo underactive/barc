@@ -224,7 +224,7 @@ struct GeneralSettingsView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Play network activity sound effects")
                                 .font(.system(size: 13))
-                            Text("Play retro modem sounds when transmitting or receiving data.")
+                            Text("Play retro modem sounds when sending or receiving data.")
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                         }
@@ -256,7 +256,7 @@ struct GeneralSettingsView: View {
                             Circle()
                                 .fill(soundManager.isEnabled && soundManager.rxEnabled ? .green : .gray.opacity(0.3))
                                 .frame(width: 8, height: 8)
-                            Text("Rx (Receive) Sound")
+                            Text("Receive Data Sound")
                                 .font(.system(size: 13))
                         }
                     }
@@ -269,7 +269,7 @@ struct GeneralSettingsView: View {
                             Circle()
                                 .fill(soundManager.isEnabled && soundManager.txEnabled ? .red : .gray.opacity(0.3))
                                 .frame(width: 8, height: 8)
-                            Text("Tx (Transmit) Sound")
+                            Text("Send Data Sound")
                                 .font(.system(size: 13))
                         }
                     }
