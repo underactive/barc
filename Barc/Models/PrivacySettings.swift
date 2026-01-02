@@ -2,6 +2,15 @@ import Foundation
 import SwiftUI
 import WebKit
 
+/// Manages all privacy-related settings and data for the browser.
+/// 
+/// This singleton class handles:
+/// - Storage whitelist management (domains that persist data)
+/// - Custom blocklist management (user-defined blocked domains)
+/// - Privacy feature toggles (fingerprinting protection, etc.)
+/// - Website data clearing operations
+/// 
+/// All settings are persisted to UserDefaults and automatically synced across the app.
 final class PrivacySettings: ObservableObject {
     static let shared = PrivacySettings()
 
@@ -125,9 +134,16 @@ final class PrivacySettings: ObservableObject {
         }
     }
 
+    /// Normalizes a domain string by removing protocol, path, and www prefix.
+    /// 
+    /// This ensures consistent domain matching regardless of how the user enters it.
+    /// Examples:
+    /// - "https://www.example.com/path" -> "example.com"
+    /// - "www.example.com" -> "example.com"
+    /// - "example.com" -> "example.com"
     private func normalizeDomain(_ domain: String) -> String {
         var normalized = domain.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        // Remove protocol if present
+        // Remove protocol if present (e.g., "https://" or "http://")
         if let range = normalized.range(of: "://") {
             normalized = String(normalized[range.upperBound...])
         }
@@ -144,7 +160,11 @@ final class PrivacySettings: ObservableObject {
 
     // MARK: - Website Data Management
 
-    /// Clears website data for all non-whitelisted domains
+    /// Clears website data (cookies, localStorage, etc.) for all domains not in the whitelist.
+    /// 
+    /// This is used when "Non-Persistent Storage" is enabled. It fetches all website data records,
+    /// filters out whitelisted domains, and removes data for the remaining domains.
+    /// This operation is asynchronous and runs in the background.
     func clearNonWhitelistedData() {
         let dataStore = WKWebsiteDataStore.default()
         let dataTypes = WKWebsiteDataStore.allWebsiteDataTypes()
@@ -168,6 +188,10 @@ final class PrivacySettings: ObservableObject {
     }
 
     /// Clears all website data including whitelisted domains
+    /// Clears all website data regardless of whitelist status.
+    /// 
+    /// This is a destructive operation that removes all cookies, localStorage, and other
+    /// website data stored by WebKit. Use with caution.
     func clearAllWebsiteData() {
         let dataStore = WKWebsiteDataStore.default()
         let dataTypes = WKWebsiteDataStore.allWebsiteDataTypes()

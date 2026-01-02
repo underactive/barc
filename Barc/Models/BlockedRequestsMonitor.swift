@@ -1,7 +1,13 @@
 import Foundation
 import SwiftUI
 
-/// Tracks blocked requests per tab for displaying feedback to users
+/// Tracks blocked network requests per tab for displaying feedback to users.
+/// 
+/// This class maintains a record of all blocked requests (trackers, custom blocklist,
+/// etc.) organized by tab ID. It provides methods to query blocked requests for
+/// specific tabs and maintains counts for UI display.
+/// 
+/// All operations run on the main actor for thread safety.
 @MainActor
 final class BlockedRequestsMonitor: ObservableObject {
     static let shared = BlockedRequestsMonitor()

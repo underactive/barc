@@ -10,6 +10,16 @@ import SwiftUI
 import Combine
 import UserNotifications
 
+/// Manages video downloads using the bundled yt-dlp binary.
+/// 
+/// This class handles:
+/// - Starting, canceling, and retrying downloads
+/// - Managing concurrent downloads (max 3 simultaneous)
+/// - Parsing yt-dlp output for progress tracking
+/// - Queueing downloads when the limit is reached
+/// 
+/// All operations run on the main actor to ensure thread-safe UI updates.
+
 private extension Optional where Wrapped == String {
     var isNilOrEmpty: Bool {
         self?.isEmpty ?? true
@@ -75,12 +85,13 @@ enum VideoFormat: String, CaseIterable, Identifiable {
 
 @MainActor
 final class DownloadManager: ObservableObject {
+    /// Maximum number of concurrent downloads allowed.
+    private let maxConcurrentDownloads = 3
     static let shared = DownloadManager()
 
     @Published var downloads: [Download] = []
     @Published var activeDownloadCount: Int = 0
 
-    private let maxConcurrentDownloads = 3
     private var processes: [UUID: Process] = [:]
     private var pendingQueue: [Download] = []
 
@@ -263,6 +274,14 @@ final class DownloadManager: ObservableObject {
         }
     }
 
+    /// Parses a line of output from yt-dlp and updates the download state accordingly.
+    /// 
+    /// yt-dlp outputs progress information in a specific format. This method:
+    /// - Extracts the video title from "TITLE:" prefixed lines
+    /// - Extracts the file path from "FILEPATH:" prefixed lines
+    /// - Parses progress percentage, speed, ETA, and total size from "[download]" lines
+    /// 
+    /// Uses regular expressions to extract structured data from the text output.
     private func parseOutputLine(_ line: String, for download: Download) {
         let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -282,8 +301,9 @@ final class DownloadManager: ObservableObject {
         }
 
         // Parse standard yt-dlp progress line: "[download]  XX.X% of XXXMiB at XXX/s ETA XX:XX"
+        // Example: "[download]  45.2% of 123.4MiB at 2.5MiB/s ETA 00:30"
         if trimmed.hasPrefix("[download]") {
-            // Extract percentage
+            // Extract percentage using regex pattern for numbers with optional decimal
             if let percentRange = trimmed.range(of: #"(\d+\.?\d*)%"#, options: .regularExpression) {
                 let percentStr = trimmed[percentRange].dropLast() // Remove %
                 if let percent = Double(percentStr) {
@@ -320,6 +340,11 @@ final class DownloadManager: ObservableObject {
         }
     }
 
+    /// Handles the termination of a yt-dlp download process.
+    /// 
+    /// This method is called when the Process terminates (successfully or with error).
+    /// It cleans up the process reference, updates the download status, and starts
+    /// the next queued download if one exists.
     private func handleProcessTermination(_ process: Process, for download: Download) {
         processes.removeValue(forKey: download.id)
         activeDownloadCount = max(0, activeDownloadCount - 1)

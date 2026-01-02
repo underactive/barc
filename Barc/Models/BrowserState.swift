@@ -2,6 +2,11 @@ import Foundation
 import SwiftUI
 import WebKit
 
+/// Manages the state of browser tabs, navigation, and UI interactions.
+/// 
+/// This class is the central state manager for the browser, coordinating between tabs,
+/// the address bar, sidebar, and various monitors (network activity, blocked requests).
+/// All UI updates are performed on the main actor to ensure thread safety.
 @MainActor
 final class BrowserState: ObservableObject {
     @Published var tabs: [Tab] = []
@@ -30,6 +35,10 @@ final class BrowserState: ObservableObject {
         tabs.firstIndex { $0.id == selectedTabId }
     }
 
+    /// Returns the homepage URL with fallback logic.
+    /// 
+    /// - Returns: The homepage URL from settings, or falls back to kagi.com if invalid,
+    ///   or about:blank as a last resort.
     var homePageURL: URL {
         guard let url = URL(string: settings.homePage) else {
             // Fallback to default homepage if settings URL is invalid
@@ -154,6 +163,10 @@ final class BrowserState: ObservableObject {
 
     // MARK: - Element Picker (xkill mode)
 
+    /// Toggles the element picker mode on/off.
+    /// 
+    /// The element picker allows users to click on any element on the page to block it.
+    /// This is useful for blocking ads, trackers, or unwanted content dynamically.
     func toggleElementPicker() {
         if isElementPickerActive {
             deactivateElementPicker()
@@ -162,6 +175,16 @@ final class BrowserState: ObservableObject {
         }
     }
 
+    /// Activates the element picker by injecting JavaScript into the current page.
+    /// 
+    /// This method injects a complex JavaScript overlay system that:
+    /// - Creates a visual overlay highlighting elements as the mouse moves
+    /// - Shows a red border around hovered elements
+    /// - Allows clicking elements to extract their selectors
+    /// - Blocks selected elements by adding them to the content blocker
+    /// 
+    /// The JavaScript creates a singleton picker object that persists across page navigations
+    /// until explicitly deactivated.
     func activateElementPicker() {
         guard let webView = selectedTab?.webView else { return }
 

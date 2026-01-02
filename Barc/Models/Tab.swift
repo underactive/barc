@@ -1,6 +1,15 @@
 import Foundation
 import WebKit
 
+/// Represents a single browser tab with its state and associated WebView.
+/// 
+/// This class maintains the state for a tab including:
+/// - URL, title, and favicon
+/// - Loading and navigation state
+/// - Progress tracking
+/// - Reference to the underlying WKWebView
+/// 
+/// The WebView reference is weak to avoid retain cycles.
 final class Tab: Identifiable, ObservableObject {
     let id = UUID()
     @Published var title: String = "New Tab"

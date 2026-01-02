@@ -111,6 +111,7 @@
 - Optional handling: Simplified nested optionals with `guard let` chains
 - Concurrency patterns: Replaced `DispatchQueue.main.async` with `@MainActor` annotations and `Task { @MainActor in ... }` closures
 - Code organization: All enums extracted from `PrivacySettings.swift` to separate files (9 enum files created)
+- Documentation: Added comprehensive `///` documentation for all public APIs, complex algorithms (element picker, yt-dlp parsing), and business logic
 
 ## Priority Levels
 

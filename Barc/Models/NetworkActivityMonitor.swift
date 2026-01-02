@@ -1,6 +1,14 @@
 import Foundation
 import SwiftUI
 
+/// Monitors network activity (transmit/receive) across browser tabs.
+/// 
+/// This class tracks which tabs are actively sending or receiving data, and provides
+/// state for UI indicators (like the URL bar activity indicator). It distinguishes
+/// between activity from the active tab vs background tabs, and uses timers to
+/// automatically clear activity state after a period of inactivity.
+/// 
+/// All operations run on the main actor for thread safety.
 @MainActor
 final class NetworkActivityMonitor: ObservableObject {
     static let shared = NetworkActivityMonitor()

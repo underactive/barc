@@ -90,11 +90,16 @@
 - [x] Follow one-type-per-file principle where practical - All enums now in separate files
 - [x] Group related files in folders - All enum files in Models folder
 
-### 11. Documentation
-- [ ] Add `///` documentation for public APIs
-- [ ] Document complex algorithms (e.g., element picker JavaScript injection)
-- [ ] Add inline comments for non-obvious code
-- [ ] Document business logic in ViewModels
+### 11. Documentation ✅
+- [x] Add `///` documentation for public APIs
+  - **Added:** Documentation for `BrowserState`, `PrivacySettings`, `DownloadManager`, `NetworkSoundManager`, `NetworkActivityMonitor`, `BlockedRequestsMonitor`, `Tab`, `BarcWebView`
+- [x] Document complex algorithms (e.g., element picker JavaScript injection)
+  - **Added:** Detailed documentation for `activateElementPicker()` explaining the JavaScript injection system
+  - **Added:** Documentation for `parseOutputLine()` explaining yt-dlp output parsing
+- [x] Add inline comments for non-obvious code
+  - **Added:** Comments for domain normalization, progress parsing regex patterns, and other complex logic
+- [x] Document business logic in ViewModels
+  - **Added:** Class-level documentation explaining the purpose and responsibilities of each ViewModel
 
 ## Phase 4: Low Priority Improvements 📝 FUTURE
 
@@ -145,7 +150,7 @@
 - Concurrency improvements completed - All ObservableObjects now use `@MainActor`
 - Optional handling cleanup completed
 - Code organization completed - All enums extracted to separate files
-- Documentation - Deferred (can be added incrementally)
+- Documentation completed - Added comprehensive documentation for public APIs and complex algorithms
 
 ### 📝 Phase 4 (Low Priority) - FUTURE
 - Performance optimizations

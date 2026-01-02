@@ -1,6 +1,11 @@
 import AVFoundation
 import Combine
 
+/// Manages retro modem-style sound effects for network activity.
+/// 
+/// This class plays audio feedback when data is sent (TX) or received (RX) over the network.
+/// Sounds can be scoped to all tabs or just the active tab, and volume can be adjusted.
+/// Uses AVAudioEngine to generate and play the sound effects.
 final class NetworkSoundManager: ObservableObject {
     static let shared = NetworkSoundManager()
 

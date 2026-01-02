@@ -5,6 +5,13 @@ import PDFKit
 
 // MARK: - Custom WKWebView with Context Menu
 
+/// Custom WKWebView subclass that adds context menu functionality.
+/// 
+/// This class extends WKWebView to add custom menu items:
+/// - "View Page Source" - Opens the page source in a new window
+/// - "Save Page As..." - Allows saving the page in various formats (Web Archive, HTML, PNG)
+/// 
+/// The coordinator reference is weak to avoid retain cycles.
 final class BarcWebView: WKWebView {
     weak var coordinator: WebView.Coordinator?
 
