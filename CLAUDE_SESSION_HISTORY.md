@@ -56,6 +56,7 @@ This file documents all development work done on Barc with Claude Code, so futur
 
 **General Settings:**
 21. **Fraudulent Website Warning** - WebKit's built-in protection
+22. **Crypto Miner Blocking** - Blocks known mining domains + behavioral detection
 
 ### Domain Whitelist for Persistent Storage
 - Users can whitelist domains (e.g., kagi.com) to stay logged in
@@ -233,6 +234,10 @@ open ~/Library/Developer/Xcode/DerivedData/Barc-*/Build/Products/Debug/Barc.app
 29. **Video Download Feature**: Download videos from YouTube, Vimeo, and 1000+ sites using bundled yt-dlp with format selection menu
 30. **Element Picker (xkill mode)**: Click-to-remove page elements like browser dev tools
 31. **Netscape-style Loading Throbber**: Animated "B" logo with shooting stars during page load
+32. **Crypto Miner Blocking**: Domain blocklist + behavioral detection for mining scripts
+33. **View Page Source**: Context menu to view syntax-highlighted HTML source
+34. **Save Page As**: Save as Web Archive, HTML, or full-page PNG screenshot
+35. **Throbber Size Settings**: Configurable size (None/Small/Medium/Large)
 
 ---
 
@@ -248,7 +253,7 @@ open ~/Library/Developer/Xcode/DerivedData/Barc-*/Build/Products/Debug/Barc.app
 
 ---
 
-*Last updated: December 31, 2024 (Session 5)*
+*Last updated: January 2, 2025 (Session 6)*
 
 ---
 
@@ -528,3 +533,52 @@ Added ability to click-to-remove page elements (like browser dev tools element p
   - Click removes the element from DOM
   - ESC or click hammer again to exit
 - **Implementation**: JavaScript injection with CSS overlay and click handler
+
+### Crypto Miner Blocking - Session 6
+Added protection against cryptocurrency mining scripts:
+- **Domain Blocklist**: 50+ known mining domains (Coinhive, CryptoLoot, JSEcoin, etc.)
+- **Behavioral Detection**: JavaScript monitors for:
+  - WebAssembly instantiation (miners use WASM for performance)
+  - Excessive Web Worker creation
+  - Known mining script patterns
+- **Settings**: Toggle in Privacy > Content Blocking > "Block Crypto Miners"
+- **Tracking**: Blocked mining attempts shown in privacy popover with "Crypto Miner" reason
+- **Privacy Score**: Adds to score when enabled (now 23/23 max)
+
+### View Page Source - Session 6
+Added context menu option to view page source:
+- **Access**: Right-click on any page → "View Page Source"
+- **Features**:
+  - Syntax highlighting (tags, attributes, values, comments)
+  - Dark theme matching browser aesthetic
+  - Resizable window
+  - Window title shows domain
+- **Implementation**: Custom `BarcWebView` subclass overriding `willOpenMenu`
+- **Window Management**: `SourceWindowManager` handles lifecycle to prevent crashes
+
+### Save Page As - Session 6
+Added Safari-style save page functionality:
+- **Access**: Right-click on any page → "Save Page As..."
+- **Format Options** (dropdown in save dialog):
+  - **Web Archive** (.webarchive) - Complete page with all resources
+  - **Page Source** (.html) - HTML source only
+  - **PNG Image (Full Page)** (.png) - Full page screenshot including scrollable content
+- **Full Page Capture**: Uses PDF rendering to capture entire document, converts to PNG at 2x retina quality
+- **Implementation**:
+  - `createWebArchiveData()` for web archives
+  - JavaScript `document.documentElement.outerHTML` for HTML
+  - `createPDF()` → PDFKit → NSImage → PNG for screenshots
+
+### Throbber Size Settings - Session 6
+Combined throbber toggle and size into single dropdown:
+- **Location**: Settings > General > Indicator Lights > "Loading throbber"
+- **Options**: None, Small, Medium, Large
+  - **None**: Throbber hidden
+  - **Small**: 28×28 (original size, scale 1.0)
+  - **Medium**: 40×40 (scale ~1.43)
+  - **Large**: 56×56 (scale 2.0)
+- **Implementation**:
+  - `ThrobberSize` enum with `none`, `small`, `medium`, `large` cases
+  - `isEnabled` computed property checks for `.none`
+  - `scale` property returns CGFloat multiplier
+  - `NetscapeThrobberView` accepts `scale` parameter for all sizing
