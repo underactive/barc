@@ -32,247 +32,273 @@ struct PrivacySettingsView: View {
     @State private var showingFingerprintWarning = false
     @State private var dontShowAgainChecked = false
 
-    var body: some View {
-        Form {
-            // MARK: - Overview
-            Section {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Privacy Score")
+    // MARK: - Computed Properties (Performance Optimization)
+    
+    /// Privacy score values (cached from settings)
+    private var maxPrivacyScore: Int { PrivacySettings.maxPrivacyScore }
+    private var privacyScore: Int { settings.privacyScore }
+    private var privacyScoreDescription: String { settings.privacyScoreDescription }
+    
+    /// Overview section view (extracted for performance)
+    private var overviewSection: some View {
+        Section {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Privacy Score")
+                        .font(.system(size: 13, weight: .medium))
+                    Text(privacyScoreDescription)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                    PrivacyScoreBadge(score: privacyScore, maxScore: maxPrivacyScore)
+                        .equatable()
+            }
+            .padding(.vertical, 4)
+
+            Button("Reset to Recommended Settings") {
+                showingResetConfirmation = true
+            }
+            .confirmationDialog(
+                "Reset Privacy Settings?",
+                isPresented: $showingResetConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Reset", role: .destructive) {
+                    settings.resetToDefaults()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will enable all privacy protections.")
+            }
+        } header: {
+            Label("Overview", systemImage: "chart.bar")
+                .font(.headline)
+        }
+    }
+    
+    /// Fingerprinting protection section view (extracted for performance)
+    private var fingerprintingSection: some View {
+        Section {
+            FingerprintToggleRow(
+                title: "Canvas Fingerprint Protection",
+                description: "Add subtle noise to canvas data to prevent unique browser identification.",
+                systemImage: "hand.raised.fingers.spread",
+                isOn: $settings.canvasFingerprintProtection,
+                showWarning: showFingerprintWarningIfNeeded
+            )
+
+            FingerprintToggleRow(
+                title: "WebGL Fingerprint Protection",
+                description: "Mask WebGL renderer and vendor info used for browser identification.",
+                systemImage: "cube.transparent",
+                isOn: $settings.webGLFingerprintProtection,
+                showWarning: showFingerprintWarningIfNeeded
+            )
+
+            FingerprintToggleRow(
+                title: "WebRTC IP Leak Protection",
+                description: "Prevent websites from discovering your real IP address through WebRTC.",
+                systemImage: "network.slash",
+                isOn: $settings.webRTCProtection,
+                showWarning: showFingerprintWarningIfNeeded
+            )
+
+            FingerprintToggleRow(
+                title: "Hardware Fingerprint Resistance",
+                description: "Spoof hardware info (CPU cores, memory) to reduce fingerprinting accuracy.",
+                systemImage: "cpu",
+                isOn: $settings.hardwareFingerprintResistance,
+                showWarning: showFingerprintWarningIfNeeded
+            )
+
+            FingerprintToggleRow(
+                title: "Font Fingerprint Protection",
+                description: "Limit detectable fonts to a common subset to prevent identification.",
+                systemImage: "textformat",
+                isOn: $settings.fontFingerprintProtection,
+                showWarning: showFingerprintWarningIfNeeded
+            )
+
+            FingerprintToggleRow(
+                title: "AudioContext Fingerprint Protection",
+                description: "Spoof audio processing to prevent audio-based fingerprinting.",
+                systemImage: "waveform",
+                isOn: $settings.audioContextFingerprintProtection,
+                showWarning: showFingerprintWarningIfNeeded
+            )
+
+            BatteryAPIBlockingRow(settings: settings, showWarning: showFingerprintWarningIfNeeded)
+
+            LanguageSpoofingRow(settings: settings, showWarning: showFingerprintWarningIfNeeded)
+
+            TimezoneSpoofingRow(settings: settings, showWarning: showFingerprintWarningIfNeeded)
+
+            ScreenResolutionSpoofingRow(settings: settings, showWarning: showFingerprintWarningIfNeeded)
+        } header: {
+            Label("Fingerprinting Protection", systemImage: "hand.raised")
+                .font(.headline)
+        }
+    }
+    
+    /// Content blocking section view (extracted for performance)
+    private var contentBlockingSection: some View {
+        Section {
+            JavaScriptToggleRow(settings: settings)
+
+            PrivacyToggleRow(
+                title: "Block Media Autoplay",
+                description: "Prevent videos and audio from playing automatically until you interact.",
+                systemImage: "play.slash",
+                isOn: $settings.blockMediaAutoplay
+            )
+
+            TrackerBlockingRow(settings: settings)
+
+            PrivacyToggleRow(
+                title: "Tracking Pixel Blocking",
+                description: "Block invisible 1x1 pixel images used for email and web tracking.",
+                systemImage: "eye.slash.circle",
+                isOn: $settings.trackingPixelBlocking
+            )
+
+            PrivacyToggleRow(
+                title: "Popup Blocking",
+                description: "Open popup windows in the current tab instead of new windows.",
+                systemImage: "rectangle.badge.xmark",
+                isOn: $settings.popupBlocking
+            )
+
+            PrivacyToggleRow(
+                title: "Third-Party Cookie Blocking",
+                description: "Block cookies from domains other than the site you're visiting.",
+                systemImage: "circle.slash",
+                isOn: $settings.thirdPartyCookieBlocking
+            )
+
+            CrossSiteTrackingRow(settings: settings)
+
+            SocialWidgetBlockingRow(settings: settings)
+
+            CookieBannerRow(settings: settings)
+
+            ClipboardBlockingRow(settings: settings)
+
+            CryptoMinerBlockingRow(settings: settings)
+
+            // Custom Blocklist
+            CustomBlocklistView(settings: settings, newDomain: $newBlockedDomain)
+        } header: {
+            Label("Content Blocking", systemImage: "shield.lefthalf.filled")
+                .font(.headline)
+        }
+    }
+    
+    /// Network privacy section view (extracted for performance)
+    private var networkPrivacySection: some View {
+        Section {
+            // HTTPS-Only Mode
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 12) {
+                    Image(systemName: "lock.shield")
+                        .font(.system(size: 16))
+                        .foregroundColor(settings.httpsOnlyMode != .off ? .accentColor : .secondary)
+                        .frame(width: 24)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("HTTPS-Only Mode")
                             .font(.system(size: 13, weight: .medium))
-                        Text(privacyScoreDescription)
+                        Text("Control how the browser handles insecure HTTP connections.")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
+                            .lineLimit(2)
                     }
 
                     Spacer()
 
-                    PrivacyScoreBadge(score: privacyScore, maxScore: maxPrivacyScore)
-                }
-                .padding(.vertical, 4)
-
-                Button("Reset to Recommended Settings") {
-                    showingResetConfirmation = true
-                }
-                .confirmationDialog(
-                    "Reset Privacy Settings?",
-                    isPresented: $showingResetConfirmation,
-                    titleVisibility: .visible
-                ) {
-                    Button("Reset", role: .destructive) {
-                        settings.resetToDefaults()
+                    Picker("", selection: $settings.httpsOnlyMode) {
+                        ForEach(HTTPSOnlyMode.allCases) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
                     }
-                    Button("Cancel", role: .cancel) {}
-                } message: {
-                    Text("This will enable all privacy protections.")
+                    .pickerStyle(.menu)
+                    .frame(width: 160)
                 }
-            } header: {
-                Label("Overview", systemImage: "chart.bar")
-                    .font(.headline)
+
+                Text(settings.httpsOnlyMode.description)
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                    .padding(.leading, 36)
             }
+            .padding(.vertical, 4)
 
-            // MARK: - Fingerprinting Protection
-            Section {
-                FingerprintToggleRow(
-                    title: "Canvas Fingerprint Protection",
-                    description: "Add subtle noise to canvas data to prevent unique browser identification.",
-                    systemImage: "hand.raised.fingers.spread",
-                    isOn: $settings.canvasFingerprintProtection,
-                    showWarning: showFingerprintWarningIfNeeded
-                )
+            // Referrer Policy
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 12) {
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.system(size: 16))
+                        .foregroundColor(settings.referrerPolicy != .defaultPolicy ? .accentColor : .secondary)
+                        .frame(width: 24)
 
-                FingerprintToggleRow(
-                    title: "WebGL Fingerprint Protection",
-                    description: "Mask WebGL renderer and vendor info used for browser identification.",
-                    systemImage: "cube.transparent",
-                    isOn: $settings.webGLFingerprintProtection,
-                    showWarning: showFingerprintWarningIfNeeded
-                )
-
-                FingerprintToggleRow(
-                    title: "WebRTC IP Leak Protection",
-                    description: "Prevent websites from discovering your real IP address through WebRTC.",
-                    systemImage: "network.slash",
-                    isOn: $settings.webRTCProtection,
-                    showWarning: showFingerprintWarningIfNeeded
-                )
-
-                FingerprintToggleRow(
-                    title: "Hardware Fingerprint Resistance",
-                    description: "Spoof hardware info (CPU cores, memory) to reduce fingerprinting accuracy.",
-                    systemImage: "cpu",
-                    isOn: $settings.hardwareFingerprintResistance,
-                    showWarning: showFingerprintWarningIfNeeded
-                )
-
-                FingerprintToggleRow(
-                    title: "Font Fingerprint Protection",
-                    description: "Limit detectable fonts to a common subset to prevent identification.",
-                    systemImage: "textformat",
-                    isOn: $settings.fontFingerprintProtection,
-                    showWarning: showFingerprintWarningIfNeeded
-                )
-
-                FingerprintToggleRow(
-                    title: "AudioContext Fingerprint Protection",
-                    description: "Spoof audio processing to prevent audio-based fingerprinting.",
-                    systemImage: "waveform",
-                    isOn: $settings.audioContextFingerprintProtection,
-                    showWarning: showFingerprintWarningIfNeeded
-                )
-
-                BatteryAPIBlockingRow(settings: settings, showWarning: showFingerprintWarningIfNeeded)
-
-                LanguageSpoofingRow(settings: settings, showWarning: showFingerprintWarningIfNeeded)
-
-                TimezoneSpoofingRow(settings: settings, showWarning: showFingerprintWarningIfNeeded)
-
-                ScreenResolutionSpoofingRow(settings: settings, showWarning: showFingerprintWarningIfNeeded)
-            } header: {
-                Label("Fingerprinting Protection", systemImage: "hand.raised")
-                    .font(.headline)
-            }
-
-            Section {
-                JavaScriptToggleRow(settings: settings)
-
-                PrivacyToggleRow(
-                    title: "Block Media Autoplay",
-                    description: "Prevent videos and audio from playing automatically until you interact.",
-                    systemImage: "play.slash",
-                    isOn: $settings.blockMediaAutoplay
-                )
-
-                TrackerBlockingRow(settings: settings)
-
-                PrivacyToggleRow(
-                    title: "Tracking Pixel Blocking",
-                    description: "Block invisible 1x1 pixel images used for email and web tracking.",
-                    systemImage: "eye.slash.circle",
-                    isOn: $settings.trackingPixelBlocking
-                )
-
-                PrivacyToggleRow(
-                    title: "Popup Blocking",
-                    description: "Open popup windows in the current tab instead of new windows.",
-                    systemImage: "rectangle.badge.xmark",
-                    isOn: $settings.popupBlocking
-                )
-
-                PrivacyToggleRow(
-                    title: "Third-Party Cookie Blocking",
-                    description: "Block cookies from domains other than the site you're visiting.",
-                    systemImage: "circle.slash",
-                    isOn: $settings.thirdPartyCookieBlocking
-                )
-
-                CrossSiteTrackingRow(settings: settings)
-
-                SocialWidgetBlockingRow(settings: settings)
-
-                CookieBannerRow(settings: settings)
-
-                ClipboardBlockingRow(settings: settings)
-
-                CryptoMinerBlockingRow(settings: settings)
-
-                // Custom Blocklist
-                CustomBlocklistView(settings: settings, newDomain: $newBlockedDomain)
-            } header: {
-                Label("Content Blocking", systemImage: "shield.lefthalf.filled")
-                    .font(.headline)
-            }
-
-            Section {
-                // HTTPS-Only Mode
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "lock.shield")
-                            .font(.system(size: 16))
-                            .foregroundColor(settings.httpsOnlyMode != .off ? .accentColor : .secondary)
-                            .frame(width: 24)
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("HTTPS-Only Mode")
-                                .font(.system(size: 13, weight: .medium))
-                            Text("Control how the browser handles insecure HTTP connections.")
-                                .font(.system(size: 11))
-                                .foregroundColor(.secondary)
-                                .lineLimit(2)
-                        }
-
-                        Spacer()
-
-                        Picker("", selection: $settings.httpsOnlyMode) {
-                            ForEach(HTTPSOnlyMode.allCases) { mode in
-                                Text(mode.displayName).tag(mode)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .frame(width: 160)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Referrer Policy")
+                            .font(.system(size: 13, weight: .medium))
+                        Text("Control what information is sent about your previous page when navigating.")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .lineLimit(2)
                     }
 
-                    Text(settings.httpsOnlyMode.description)
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                        .padding(.leading, 36)
-                }
-                .padding(.vertical, 4)
+                    Spacer()
 
-                // Referrer Policy
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "arrow.left.arrow.right")
-                            .font(.system(size: 16))
-                            .foregroundColor(settings.referrerPolicy != .defaultPolicy ? .accentColor : .secondary)
-                            .frame(width: 24)
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Referrer Policy")
-                                .font(.system(size: 13, weight: .medium))
-                            Text("Control what information is sent about your previous page when navigating.")
-                                .font(.system(size: 11))
-                                .foregroundColor(.secondary)
-                                .lineLimit(2)
+                    Picker("", selection: $settings.referrerPolicy) {
+                        ForEach(ReferrerPolicy.allCases) { policy in
+                            Text(policy.displayName).tag(policy)
                         }
-
-                        Spacer()
-
-                        Picker("", selection: $settings.referrerPolicy) {
-                            ForEach(ReferrerPolicy.allCases) { policy in
-                                Text(policy.displayName).tag(policy)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .frame(width: 160)
                     }
-
-                    Text(settings.referrerPolicy.description)
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                        .padding(.leading, 36)
+                    .pickerStyle(.menu)
+                    .frame(width: 160)
                 }
-                .padding(.vertical, 4)
-            } header: {
-                Label("Network Privacy", systemImage: "network.badge.shield.half.filled")
-                    .font(.headline)
-            }
 
-            // MARK: - Storage
-            Section {
-                PrivacyToggleRow(
-                    title: "Non-Persistent Storage",
-                    description: "Clear non-whitelisted cookies and storage when Barc quits.",
-                    systemImage: "clock.badge.xmark",
-                    isOn: $settings.nonPersistentStorage
-                )
-
-                // Storage Whitelist
-                StorageWhitelistView(settings: settings, newDomain: $newWhitelistDomain)
-            } header: {
-                Label("Storage", systemImage: "internaldrive")
-                    .font(.headline)
+                Text(settings.referrerPolicy.description)
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                    .padding(.leading, 36)
             }
+            .padding(.vertical, 4)
+        } header: {
+            Label("Network Privacy", systemImage: "network.badge.shield.half.filled")
+                .font(.headline)
+        }
+    }
+    
+    /// Storage section view (extracted for performance)
+    private var storageSection: some View {
+        Section {
+            PrivacyToggleRow(
+                title: "Non-Persistent Storage",
+                description: "Clear non-whitelisted cookies and storage when Barc quits.",
+                systemImage: "clock.badge.xmark",
+                isOn: $settings.nonPersistentStorage
+            )
+
+            // Storage Whitelist
+            StorageWhitelistView(settings: settings, newDomain: $newWhitelistDomain)
+        } header: {
+            Label("Storage", systemImage: "internaldrive")
+                .font(.headline)
+        }
+    }
+
+    var body: some View {
+        Form {
+            overviewSection
+            fingerprintingSection
+            contentBlockingSection
+            networkPrivacySection
+            storageSection
         }
         .formStyle(.grouped)
         .environment(\.layoutDirection, .leftToRight)
@@ -296,11 +322,6 @@ struct PrivacySettingsView: View {
             showingFingerprintWarning = true
         }
     }
-
-    // Privacy score (delegate to PrivacySettings single source of truth)
-    private var maxPrivacyScore: Int { PrivacySettings.maxPrivacyScore }
-    private var privacyScore: Int { settings.privacyScore }
-    private var privacyScoreDescription: String { settings.privacyScoreDescription }
 }
 
 // MARK: - Components
@@ -1790,9 +1811,13 @@ struct PrivacyToggleRow: View {
     }
 }
 
-struct PrivacyScoreBadge: View {
+struct PrivacyScoreBadge: View, Equatable {
     let score: Int
     let maxScore: Int
+    
+    static func == (lhs: PrivacyScoreBadge, rhs: PrivacyScoreBadge) -> Bool {
+        lhs.score == rhs.score && lhs.maxScore == rhs.maxScore
+    }
 
     private var percent: Double {
         Double(score) / Double(maxScore)

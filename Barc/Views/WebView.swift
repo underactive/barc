@@ -350,7 +350,28 @@ struct WebView: NSViewRepresentable {
     }
 
     func updateNSView(_ webView: BarcWebView, context: Context) {
-        // Only load if URL changed externally
+        // Load URL if it changed externally or if WebView hasn't loaded it yet
+        if let tabURL = tab.url {
+            let currentURL = webView.url
+            // Load if WebView hasn't loaded anything yet (nil or about:blank), or if URL is different
+            let shouldLoad: Bool
+            if let current = currentURL {
+                // Only load if URLs are different (comparing absoluteString for reliability)
+                shouldLoad = current.absoluteString != tabURL.absoluteString
+            } else {
+                // WebView has no URL loaded, so load the tab's URL
+                shouldLoad = true
+            }
+            
+            if shouldLoad {
+                webView.load(URLRequest(url: tabURL))
+            }
+        } else {
+            // Tab has no URL, load about:blank if WebView has something else loaded
+            if let currentURL = webView.url, currentURL.absoluteString != "about:blank" {
+                webView.load(URLRequest(url: URL(string: "about:blank")!))
+            }
+        }
     }
 
     func makeCoordinator() -> Coordinator {

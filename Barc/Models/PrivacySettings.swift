@@ -20,7 +20,10 @@ final class PrivacySettings: ObservableObject {
     // MARK: - Privacy Toggles
 
     @AppStorage("privacy.nonPersistentStorage") var nonPersistentStorage: Bool = true {
-        didSet { objectWillChange.send() }
+        didSet {
+            objectWillChange.send()
+            updatePrivacyScore()
+        }
     }
 
     // MARK: - Storage Whitelist
@@ -48,6 +51,8 @@ final class PrivacySettings: ObservableObject {
     private init() {
         loadWhitelist()
         loadCustomBlocklist()
+        // Initialize privacy score - @AppStorage properties are already loaded synchronously
+        updatePrivacyScore()
     }
 
     private func loadWhitelist() {
@@ -202,39 +207,66 @@ final class PrivacySettings: ObservableObject {
     }
 
     @AppStorage("privacy.canvasFingerprintProtection") var canvasFingerprintProtection: Bool = true {
-        didSet { objectWillChange.send() }
+        didSet {
+            objectWillChange.send()
+            updatePrivacyScore()
+        }
     }
 
     @AppStorage("privacy.webGLFingerprintProtection") var webGLFingerprintProtection: Bool = true {
-        didSet { objectWillChange.send() }
+        didSet {
+            objectWillChange.send()
+            updatePrivacyScore()
+        }
     }
 
     @AppStorage("privacy.webRTCProtection") var webRTCProtection: Bool = true {
-        didSet { objectWillChange.send() }
+        didSet {
+            objectWillChange.send()
+            updatePrivacyScore()
+        }
     }
 
     @AppStorage("privacy.trackerBlocking") var trackerBlocking: Bool = true {
-        didSet { objectWillChange.send() }
+        didSet {
+            objectWillChange.send()
+            updatePrivacyScore()
+        }
     }
 
     @AppStorage("privacy.hardwareFingerprintResistance") var hardwareFingerprintResistance: Bool = true {
-        didSet { objectWillChange.send() }
+        didSet {
+            objectWillChange.send()
+            updatePrivacyScore()
+        }
     }
 
     @AppStorage("privacy.fontFingerprintProtection") var fontFingerprintProtection: Bool = true {
-        didSet { objectWillChange.send() }
+        didSet {
+            objectWillChange.send()
+            updatePrivacyScore()
+        }
     }
 
     @AppStorage("privacy.audioContextFingerprintProtection") var audioContextFingerprintProtection: Bool = true {
-        didSet { objectWillChange.send() }
+        didSet {
+            objectWillChange.send()
+            updatePrivacyScore()
+        }
     }
 
     @AppStorage("privacy.batteryAPIBlocking") var batteryAPIBlocking: Bool = true {
-        didSet { objectWillChange.send() }
+        didSet {
+            objectWillChange.send()
+            updatePrivacyScore()
+        }
     }
 
     @AppStorage("privacy.languageSpoofing") var languageSpoofing: Bool = true {
-        didSet { objectWillChange.send() }
+        didSet {
+            objectWillChange.send()
+            updatePrivacyScore()
+        }
     }
 
     @AppStorage("privacy.spoofedLanguage") var spoofedLanguage: SpoofedLanguage = .auto {
@@ -242,7 +274,10 @@ final class PrivacySettings: ObservableObject {
     }
 
     @AppStorage("privacy.timezoneSpoofing") var timezoneSpoofing: Bool = true {
-        didSet { objectWillChange.send() }
+        didSet {
+            objectWillChange.send()
+            updatePrivacyScore()
+        }
     }
 
     @AppStorage("privacy.spoofedTimezone") var spoofedTimezone: SpoofedTimezone = .auto {
@@ -250,7 +285,10 @@ final class PrivacySettings: ObservableObject {
     }
 
     @AppStorage("privacy.screenResolutionSpoofing") var screenResolutionSpoofing: Bool = true {
-        didSet { objectWillChange.send() }
+        didSet {
+            objectWillChange.send()
+            updatePrivacyScore()
+        }
     }
 
     @AppStorage("privacy.spoofedResolution") var spoofedResolution: SpoofedResolution = .auto {
@@ -258,23 +296,38 @@ final class PrivacySettings: ObservableObject {
     }
 
     @AppStorage("privacy.trackingPixelBlocking") var trackingPixelBlocking: Bool = true {
-        didSet { objectWillChange.send() }
+        didSet {
+            objectWillChange.send()
+            updatePrivacyScore()
+        }
     }
 
     @AppStorage("privacy.popupBlocking") var popupBlocking: Bool = true {
-        didSet { objectWillChange.send() }
+        didSet {
+            objectWillChange.send()
+            updatePrivacyScore()
+        }
     }
 
     @AppStorage("privacy.thirdPartyCookieBlocking") var thirdPartyCookieBlocking: Bool = true {
-        didSet { objectWillChange.send() }
+        didSet {
+            objectWillChange.send()
+            updatePrivacyScore()
+        }
     }
 
     @AppStorage("privacy.cookieBannerAutoReject") var cookieBannerAutoReject: Bool = true {
-        didSet { objectWillChange.send() }
+        didSet {
+            objectWillChange.send()
+            updatePrivacyScore()
+        }
     }
 
     @AppStorage("privacy.clipboardAccessBlocking") var clipboardAccessBlocking: Bool = true {
-        didSet { objectWillChange.send() }
+        didSet {
+            objectWillChange.send()
+            updatePrivacyScore()
+        }
     }
 
     @AppStorage("privacy.javaScriptEnabled") var javaScriptEnabled: Bool = true {
@@ -282,19 +335,31 @@ final class PrivacySettings: ObservableObject {
     }
 
     @AppStorage("privacy.blockMediaAutoplay") var blockMediaAutoplay: Bool = true {
-        didSet { objectWillChange.send() }
+        didSet {
+            objectWillChange.send()
+            updatePrivacyScore()
+        }
     }
 
     @AppStorage("privacy.crossSiteTrackingPrevention") var crossSiteTrackingPrevention: Bool = true {
-        didSet { objectWillChange.send() }
+        didSet {
+            objectWillChange.send()
+            updatePrivacyScore()
+        }
     }
 
     @AppStorage("privacy.socialWidgetBlocking") var socialWidgetBlocking: Bool = true {
-        didSet { objectWillChange.send() }
+        didSet {
+            objectWillChange.send()
+            updatePrivacyScore()
+        }
     }
 
     @AppStorage("privacy.cryptoMinerBlocking") var cryptoMinerBlocking: Bool = true {
-        didSet { objectWillChange.send() }
+        didSet {
+            objectWillChange.send()
+            updatePrivacyScore()
+        }
     }
 
     @AppStorage("privacy.fraudulentWebsiteWarning") var fraudulentWebsiteWarning: Bool = true {
@@ -302,11 +367,17 @@ final class PrivacySettings: ObservableObject {
     }
 
     @AppStorage("privacy.httpsOnlyMode") var httpsOnlyMode: HTTPSOnlyMode = .upgrade {
-        didSet { objectWillChange.send() }
+        didSet {
+            objectWillChange.send()
+            updatePrivacyScore()
+        }
     }
 
     @AppStorage("privacy.referrerPolicy") var referrerPolicy: ReferrerPolicy = .strictOrigin {
-        didSet { objectWillChange.send() }
+        didSet {
+            objectWillChange.send()
+            updatePrivacyScore()
+        }
     }
 
     // MARK: - UI Preferences
@@ -467,8 +538,16 @@ final class PrivacySettings: ObservableObject {
     /// Maximum privacy score (excluding nuclear options like JS disable)
     static let maxPrivacyScore: Int = 23
 
-    /// Current privacy score based on enabled protections
-    var privacyScore: Int {
+    /// Current privacy score based on enabled protections (cached for performance)
+    /// 
+    /// This is a @Published property that automatically updates when any privacy setting changes.
+    /// The score is calculated once and cached, avoiding repeated computation on every access.
+    @Published private(set) var privacyScore: Int = 0
+
+    /// Calculates and updates the cached privacy score.
+    /// 
+    /// This method should be called whenever any privacy setting changes to keep the score in sync.
+    private func updatePrivacyScore() {
         var score = 0
         if nonPersistentStorage { score += 1 }
         if canvasFingerprintProtection { score += 1 }
@@ -494,7 +573,7 @@ final class PrivacySettings: ObservableObject {
         if httpsOnlyMode != .off { score += 1 }
         if referrerPolicy != .defaultPolicy { score += 1 }
         // Note: javaScriptEnabled is intentionally excluded (nuclear option)
-        return score
+        privacyScore = score
     }
 
     /// Privacy score as a percentage (0.0 to 1.0)
