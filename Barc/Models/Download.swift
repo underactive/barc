@@ -16,7 +16,7 @@ enum DownloadStatus: String, Codable {
     case cancelled
 }
 
-class Download: Identifiable, ObservableObject {
+final class Download: Identifiable, ObservableObject {
     let id = UUID()
     let url: URL                              // Original video page URL
     let sourceTitle: String                   // Page title when download started

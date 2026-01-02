@@ -1,7 +1,7 @@
 import AVFoundation
 import Combine
 
-class NetworkSoundManager: ObservableObject {
+final class NetworkSoundManager: ObservableObject {
     static let shared = NetworkSoundManager()
 
     private var audioEngine: AVAudioEngine?
@@ -137,7 +137,10 @@ class NetworkSoundManager: ObservableObject {
         audioEngine.attach(txPlayerNode)
         audioEngine.attach(rxPlayerNode)
 
-        let format = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1)!
+        guard let format = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1) else {
+            print("[Barc] Failed to create audio format")
+            return
+        }
 
         audioEngine.connect(txPlayerNode, to: audioEngine.mainMixerNode, format: format)
         audioEngine.connect(rxPlayerNode, to: audioEngine.mainMixerNode, format: format)

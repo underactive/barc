@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-class NetworkActivityMonitor: ObservableObject {
+final class NetworkActivityMonitor: ObservableObject {
     static let shared = NetworkActivityMonitor()
 
     @Published var isReceiving: Bool = false

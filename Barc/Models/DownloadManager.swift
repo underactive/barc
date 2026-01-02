@@ -73,7 +73,7 @@ enum VideoFormat: String, CaseIterable, Identifiable {
     }
 }
 
-class DownloadManager: ObservableObject {
+final class DownloadManager: ObservableObject {
     static let shared = DownloadManager()
 
     @Published var downloads: [Download] = []

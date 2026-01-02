@@ -5,7 +5,7 @@ import PDFKit
 
 // MARK: - Custom WKWebView with Context Menu
 
-class BarcWebView: WKWebView {
+final class BarcWebView: WKWebView {
     weak var coordinator: WebView.Coordinator?
 
     override func willOpenMenu(_ menu: NSMenu, with event: NSEvent) {
@@ -57,7 +57,12 @@ class BarcWebView: WKWebView {
         savePanel.allowedContentTypes = [.webArchive]
         savePanel.isExtensionHidden = false
 
-        savePanel.beginSheetModal(for: self.window!) { [weak self] response in
+        guard let window = self.window else {
+            print("[Barc] Cannot show save panel: webView has no window")
+            return
+        }
+
+        savePanel.beginSheetModal(for: window) { [weak self] response in
             guard response == .OK, let url = savePanel.url, let self = self else { return }
 
             let selectedIndex = formatPopup.indexOfSelectedItem
@@ -284,7 +289,7 @@ class BarcWebView: WKWebView {
 }
 
 // Window manager to keep references to source windows
-class SourceWindowManager: NSObject, NSWindowDelegate {
+final class SourceWindowManager: NSObject, NSWindowDelegate {
     static let shared = SourceWindowManager()
     private var windows: [NSWindow] = []
 

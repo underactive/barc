@@ -1,7 +1,7 @@
 import Foundation
 import WebKit
 
-class Tab: Identifiable, ObservableObject {
+final class Tab: Identifiable, ObservableObject {
     let id = UUID()
     @Published var title: String = "New Tab"
     @Published var url: URL?

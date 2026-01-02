@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 
 /// Tracks blocked requests per tab for displaying feedback to users
-class BlockedRequestsMonitor: ObservableObject {
+final class BlockedRequestsMonitor: ObservableObject {
     static let shared = BlockedRequestsMonitor()
 
     /// Blocked domain info with timestamp

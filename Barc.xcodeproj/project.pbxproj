@@ -25,6 +25,9 @@
 		A1000010238A0002 /* DownloadsSidebarSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000032238A0001 /* DownloadsSidebarSection.swift */; };
 		A1000010238A0003 /* DownloadRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000033238A0001 /* DownloadRowView.swift */; };
 		A1000010238A0004 /* yt-dlp in Resources */ = {isa = PBXBuildFile; fileRef = A1000034238A0001 /* yt-dlp */; };
+		A1000010238A0005 /* LeftAlignedTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000035238A0001 /* LeftAlignedTextField.swift */; };
+		A1000010238A0006 /* SettingsComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000036238A0001 /* SettingsComponents.swift */; };
+		A1000010238A0007 /* GeneralSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000037238A0001 /* GeneralSettingsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -49,6 +52,9 @@
 		A1000032238A0001 /* DownloadsSidebarSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadsSidebarSection.swift; sourceTree = "<group>"; };
 		A1000033238A0001 /* DownloadRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadRowView.swift; sourceTree = "<group>"; };
 		A1000034238A0001 /* yt-dlp */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; path = "yt-dlp"; sourceTree = "<group>"; };
+		A1000035238A0001 /* LeftAlignedTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeftAlignedTextField.swift; sourceTree = "<group>"; };
+		A1000036238A0001 /* SettingsComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsComponents.swift; sourceTree = "<group>"; };
+		A1000037238A0001 /* GeneralSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -100,6 +106,9 @@
 				A1000014238A0001 /* SidebarView.swift */,
 				A1000015238A0001 /* AddressBarView.swift */,
 				A100001C238A0001 /* SettingsView.swift */,
+				A1000035238A0001 /* LeftAlignedTextField.swift */,
+				A1000036238A0001 /* SettingsComponents.swift */,
+				A1000037238A0001 /* GeneralSettingsView.swift */,
 				A1000032238A0001 /* DownloadsSidebarSection.swift */,
 				A1000033238A0001 /* DownloadRowView.swift */,
 			);
@@ -215,6 +224,9 @@
 				A100000F238A0001 /* DownloadManager.swift in Sources */,
 				A1000010238A0002 /* DownloadsSidebarSection.swift in Sources */,
 				A1000010238A0003 /* DownloadRowView.swift in Sources */,
+				A1000010238A0005 /* LeftAlignedTextField.swift in Sources */,
+				A1000010238A0006 /* SettingsComponents.swift in Sources */,
+				A1000010238A0007 /* GeneralSettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 import WebKit
 
-class PrivacySettings: ObservableObject {
+final class PrivacySettings: ObservableObject {
     static let shared = PrivacySettings()
 
     private let whitelistKey = "privacy.storageWhitelist"

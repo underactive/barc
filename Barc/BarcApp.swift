@@ -53,7 +53,7 @@ struct BarcApp: App {
 
 // MARK: - App Delegate
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate {
     private let settings = PrivacySettings.shared
     private let soundManager = NetworkSoundManager.shared
 
