@@ -188,6 +188,8 @@ struct PrivacySettingsView: View {
 
             CryptoMinerBlockingRow(settings: settings)
 
+            YouTubeShortsBlockingRow(settings: settings)
+
             // Custom Blocklist
             CustomBlocklistView(settings: settings, newDomain: $newBlockedDomain)
         } header: {
@@ -1188,6 +1190,99 @@ struct CryptoMinerBlockingRow: View {
             }
             .padding(12)
             .frame(width: 300)
+        }
+    }
+}
+
+struct YouTubeShortsBlockingRow: View {
+    @ObservedObject var settings: PrivacySettings
+    @State private var showingInfo = false
+
+    var body: some View {
+        Toggle(isOn: $settings.blockYouTubeShorts) {
+            HStack(spacing: 12) {
+                Image(systemName: "video.slash")
+                    .font(.system(size: 16))
+                    .foregroundColor(settings.blockYouTubeShorts ? .accentColor : .secondary)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Block YouTube Shorts")
+                        .font(.system(size: 13, weight: .medium))
+                    HStack(spacing: 0) {
+                        Text("Remove Shorts from YouTube homepage and navigation sidebar. ")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                        Button("More info") {
+                            showingInfo = true
+                        }
+                        .font(.system(size: 11))
+                        .buttonStyle(.plain)
+                        .foregroundColor(.accentColor)
+                    }
+                }
+            }
+        }
+        .toggleStyle(.switch)
+        .padding(.vertical, 4)
+        .popover(isPresented: $showingInfo, arrowEdge: .trailing) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "video.slash.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("What's Removed")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Shorts link in left navigation sidebar"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Shorts sections on YouTube homepage"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Shorts content grids and recommendations"
+                    )
+                }
+
+                Divider()
+
+                HStack {
+                    Image(systemName: "info.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.blue)
+                    Text("How It Works")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "magnifyingglass",
+                        text: "Uses JavaScript to detect and remove Shorts elements"
+                    )
+                    InfoRow(
+                        icon: "arrow.triangle.2.circlepath",
+                        text: "Monitors for dynamically loaded content"
+                    )
+                    InfoRow(
+                        icon: "checkmark",
+                        text: "Works on YouTube homepage and navigation"
+                    )
+                }
+
+                Divider()
+
+                Text("This feature requires JavaScript to be enabled. Changes take effect after reloading YouTube pages.")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+            }
+            .padding(12)
+            .frame(width: 320)
         }
     }
 }

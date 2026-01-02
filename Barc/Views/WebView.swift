@@ -448,6 +448,11 @@ struct WebView: NSViewRepresentable {
         // Inject audio playback detection script
         injectAudioPlaybackDetectionScript(into: contentController)
 
+        // Inject YouTube Shorts blocking script
+        if settings.blockYouTubeShorts {
+            injectYouTubeShortsBlockingScript(into: contentController)
+        }
+
         configuration.userContentController = contentController
 
         // Privacy: Fraudulent website warning
@@ -2317,6 +2322,179 @@ struct WebView: NSViewRepresentable {
                     updatePlaybackStatus();
                 }
             }, 500);
+        })();
+        """
+
+        let userScript = WKUserScript(
+            source: script,
+            injectionTime: .atDocumentEnd,
+            forMainFrameOnly: true
+        )
+        controller.addUserScript(userScript)
+    }
+
+    // MARK: - YouTube Shorts Blocking Script
+
+    private func injectYouTubeShortsBlockingScript(into controller: WKUserContentController) {
+        let script = """
+        (function() {
+            if (window.__barcYouTubeShortsBlocked) return;
+            window.__barcYouTubeShortsBlocked = true;
+
+            function isYouTube() {
+                const hostname = window.location.hostname.toLowerCase();
+                return hostname.includes('youtube.com') || hostname.includes('youtu.be');
+            }
+
+            if (!isYouTube()) return;
+
+            function removeShortsFromNavigation() {
+                // Remove Shorts from left navigation sidebar
+                const navSelectors = [
+                    'a[href*="/shorts"]',
+                    'ytd-mini-guide-entry-renderer a[href*="/shorts"]',
+                    '#guide a[href*="/shorts"]',
+                    'ytd-guide-entry-renderer a[href*="/shorts"]'
+                ];
+
+                for (const selector of navSelectors) {
+                    try {
+                        const elements = document.querySelectorAll(selector);
+                        elements.forEach(el => {
+                            const parent = el.closest('ytd-mini-guide-entry-renderer, ytd-guide-entry-renderer');
+                            if (parent) {
+                                parent.remove();
+                            } else {
+                                el.remove();
+                            }
+                        });
+                    } catch(e) {}
+                }
+
+                // Also check for text-based matching in navigation
+                try {
+                    const navLinks = document.querySelectorAll('#guide a, ytd-mini-guide-entry-renderer a, ytd-guide-entry-renderer a');
+                    navLinks.forEach(link => {
+                        const text = (link.textContent || link.innerText || '').trim().toLowerCase();
+                        const href = link.getAttribute('href') || '';
+                        if ((text === 'shorts' || href.includes('/shorts')) && !href.includes('/watch')) {
+                            const parent = link.closest('ytd-mini-guide-entry-renderer, ytd-guide-entry-renderer');
+                            if (parent) {
+                                parent.remove();
+                            }
+                        }
+                    });
+                } catch(e) {}
+            }
+
+            function removeShortsFromHomepage() {
+                // Remove Shorts sections from homepage
+                const shortsSelectors = [
+                    'ytd-rich-section-renderer[content-type="shorts"]',
+                    'ytd-reel-shelf-renderer',
+                    'ytd-shorts',
+                    '[class*="shorts"]',
+                    'ytd-rich-section-renderer:has(ytd-reel-shelf-renderer)'
+                ];
+
+                for (const selector of shortsSelectors) {
+                    try {
+                        const elements = document.querySelectorAll(selector);
+                        elements.forEach(el => {
+                            // Check if it's actually a Shorts section
+                            const text = (el.textContent || el.innerText || '').toLowerCase();
+                            const hasShortsHeading = text.includes('shorts') && (
+                                text.includes('short') || 
+                                el.querySelector('h2, h3, [class*="title"]')
+                            );
+                            
+                            if (hasShortsHeading || selector.includes('reel') || selector.includes('shorts')) {
+                                el.remove();
+                            }
+                        });
+                    } catch(e) {}
+                }
+
+                // Remove Shorts heading sections by text content
+                try {
+                    const sections = document.querySelectorAll('ytd-rich-section-renderer, ytd-rich-shelf-renderer');
+                    sections.forEach(section => {
+                        const heading = section.querySelector('h2, h3, [class*="title"], [id*="title"]');
+                        if (heading) {
+                            const headingText = (heading.textContent || heading.innerText || '').trim().toLowerCase();
+                            if (headingText === 'shorts' || headingText.includes('shorts')) {
+                                section.remove();
+                            }
+                        }
+                    });
+                } catch(e) {}
+            }
+
+            function blockShorts() {
+                if (!isYouTube()) return;
+                removeShortsFromNavigation();
+                removeShortsFromHomepage();
+            }
+
+            // Run immediately if page is already loaded
+            if (document.readyState === 'complete' || document.readyState === 'interactive') {
+                setTimeout(blockShorts, 100);
+                setTimeout(blockShorts, 500);
+            }
+
+            // Run on DOMContentLoaded
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(blockShorts, 100);
+                setTimeout(blockShorts, 500);
+            });
+
+            // Watch for dynamically added content (YouTube uses SPA navigation)
+            const observer = new MutationObserver((mutations) => {
+                let shouldBlock = false;
+                for (const mutation of mutations) {
+                    if (mutation.addedNodes.length > 0) {
+                        shouldBlock = true;
+                        break;
+                    }
+                }
+                if (shouldBlock) {
+                    // Debounce to avoid excessive calls
+                    clearTimeout(window.__barcShortsBlockTimeout);
+                    window.__barcShortsBlockTimeout = setTimeout(blockShorts, 300);
+                }
+            });
+
+            // Start observing
+            if (document.body) {
+                observer.observe(document.body, { childList: true, subtree: true });
+            } else {
+                document.addEventListener('DOMContentLoaded', () => {
+                    if (document.body) {
+                        observer.observe(document.body, { childList: true, subtree: true });
+                    }
+                });
+            }
+
+            // Also watch for URL changes (SPA navigation)
+            let lastUrl = window.location.href;
+            const urlObserver = new MutationObserver(() => {
+                const currentUrl = window.location.href;
+                if (currentUrl !== lastUrl) {
+                    lastUrl = currentUrl;
+                    setTimeout(blockShorts, 500);
+                }
+            });
+
+            if (document.body) {
+                urlObserver.observe(document.body, { childList: true, subtree: true });
+            }
+
+            // Listen for popstate (back/forward navigation)
+            window.addEventListener('popstate', () => {
+                setTimeout(blockShorts, 500);
+            });
+
+            console.log('[Barc] YouTube Shorts blocking enabled');
         })();
         """
 

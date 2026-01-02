@@ -380,6 +380,12 @@ final class PrivacySettings: ObservableObject {
         }
     }
 
+    @AppStorage("privacy.blockYouTubeShorts") var blockYouTubeShorts: Bool = false {
+        didSet {
+            objectWillChange.send()
+        }
+    }
+
     // MARK: - UI Preferences
 
     @AppStorage("privacy.suppressFingerprintWarning") var suppressFingerprintWarning: Bool = false {
@@ -642,6 +648,7 @@ final class PrivacySettings: ObservableObject {
         fraudulentWebsiteWarning = true
         httpsOnlyMode = .upgrade
         referrerPolicy = .strictOrigin
+        blockYouTubeShorts = false
         customBlocklistEnabled = false
         searchEngine = .kagi
         homePage = "https://kagi.com"
