@@ -1,0 +1,242 @@
+# macOS Swift Development Rules
+
+## Swift Language Best Practices
+
+### Code Style & Organization
+- Use Swift naming conventions: PascalCase for types, camelCase for variables/functions
+- Prefer `let` over `var` unless mutation is required
+- Use `guard` statements for early returns and unwrapping optionals
+- Prefer `if let` or `guard let` over force unwrapping (`!`)
+- Use `nil` coalescing operator (`??`) for default values
+- Mark classes as `final` unless subclassing is intended
+- Use `private` access control by default, escalate only when needed
+- Group related code with `// MARK: -` comments
+- Keep functions focused and single-purpose (SRP)
+- Prefer computed properties over methods when appropriate
+
+### Optionals & Safety
+- Never force unwrap (`!`) unless absolutely certain of non-nil value
+- Use optional chaining (`?.`) and nil coalescing (`??`) appropriately
+- Prefer `guard let` for early returns in functions
+- Use `if let` for optional binding when you need the value in a scope
+- Consider `Result<Success, Failure>` for operations that can fail
+
+### Memory Management
+- Use `weak` references for delegates and parent references to avoid retain cycles
+- Use `unowned` only when you're certain the reference will outlive the object
+- Be mindful of closures capturing `self` - use `[weak self]` or `[unowned self]` when appropriate
+- Use `@StateObject` for view-owned ObservableObjects
+- Use `@ObservedObject` for externally-owned ObservableObjects
+- Use `@EnvironmentObject` for shared state across view hierarchy
+- Prefer value types (structs, enums) over reference types (classes) when possible
+
+### Error Handling
+- Use `throws` and `do-catch` for recoverable errors
+- Use `Result<Success, Failure>` for operations that can fail
+- Prefer specific error types over generic `Error`
+- Use `try?` only when you genuinely don't care about the error
+- Log errors appropriately for debugging
+
+### Concurrency
+- Use `async/await` for asynchronous operations (Swift 5.5+)
+- Use `@MainActor` for UI updates and main thread operations
+- Use `Task` for fire-and-forget async work
+- Use `Task.detached` for background work that doesn't need main actor
+- Prefer `async let` for parallel operations
+- Use `actor` for thread-safe state management
+- Avoid blocking the main thread with synchronous operations
+
+## SwiftUI Best Practices
+
+### View Composition
+- Break down large views into smaller, reusable components
+- Use `@ViewBuilder` for conditional view construction
+- Prefer composition over complex conditional logic in views
+- Extract view modifiers into reusable extensions
+- Use `Group` or `@ViewBuilder` for multiple views without a container
+
+### State Management
+- Use `@State` for local view state
+- Use `@StateObject` for view-owned ObservableObjects
+- Use `@ObservedObject` for externally-owned ObservableObjects
+- Use `@EnvironmentObject` for shared app-wide state
+- Use `@AppStorage` for UserDefaults-backed state
+- Use `@Binding` for two-way data flow between parent and child views
+- Minimize state - derive values from state when possible
+
+### Performance
+- Use `id()` modifier for stable identity when needed
+- Use `LazyVStack`/`LazyHStack` for large lists
+- Avoid creating views in body - extract to computed properties or methods
+- Use `onAppear`/`onDisappear` for lifecycle hooks
+- Prefer `equatable()` modifier for expensive views
+- Use `@StateObject` initialization in `init()` when possible
+
+### View Updates
+- Keep view bodies pure - no side effects
+- Perform side effects in `.onAppear`, `.onChange`, or `.task`
+- Use `.task(id:)` for async work tied to view lifecycle
+- Use `.onChange(of:)` for reacting to state changes
+- Avoid performing work in view body
+
+## macOS-Specific Patterns
+
+### AppKit Integration
+- Use `NSViewRepresentable` for AppKit views when SwiftUI doesn't suffice
+- Use `NSViewControllerRepresentable` for AppKit view controllers
+- Implement proper coordinator pattern for delegates
+- Handle AppKit lifecycle methods appropriately (`makeNSView`, `updateNSView`)
+- Use `NSApplicationDelegateAdaptor` for app delegate functionality
+
+### Window Management
+- Use `WindowGroup` for standard windows
+- Use `.windowStyle()` for window appearance
+- Handle window lifecycle with appropriate modifiers
+- Use `NSWindow` APIs when needed for advanced window features
+- Respect macOS window management conventions
+
+### Menu & Commands
+- Use `CommandGroup` for menu customization
+- Provide standard keyboard shortcuts (Cmd+T, Cmd+W, etc.)
+- Use `.keyboardShortcut()` modifier for shortcuts
+- Follow macOS Human Interface Guidelines for menu organization
+- Use `CommandMenu` for custom menus
+
+### Settings
+- Use `Settings` scene for preferences window
+- Use `TabView` for multi-pane settings
+- Persist settings with `@AppStorage` or `UserDefaults`
+- Provide sensible defaults
+- Validate user input in settings
+
+### File System & Permissions
+- Request appropriate entitlements in `.entitlements` file
+- Use `FileManager` for file operations
+- Handle sandbox restrictions appropriately
+- Request user permission for sensitive operations
+- Use URL-based APIs when possible
+
+## Architecture Patterns
+
+### MVVM (Model-View-ViewModel)
+- Separate business logic into ViewModels (ObservableObject)
+- Keep Views focused on presentation
+- Models should be data structures, not business logic
+- Use dependency injection for testability
+
+### Singleton Pattern
+- Use sparingly - prefer dependency injection
+- When needed, use `static let shared = ClassName()`
+- Make initializer `private` to enforce singleton
+- Consider thread safety for shared state
+
+### Coordinator Pattern
+- Use for navigation and complex flows
+- Keep navigation logic out of views
+- Use for AppKit delegate coordination
+
+## Code Organization
+
+### File Structure
+- One type per file (with exceptions for closely related types)
+- Group related files in folders (Models, Views, ViewModels, Utilities)
+- Use extensions to organize code within files
+- Keep file sizes manageable (< 500 lines when possible)
+
+### Naming
+- Use descriptive, intention-revealing names
+- Avoid abbreviations unless widely understood
+- Use verb phrases for functions, noun phrases for types
+- Prefix protocols with the type they describe (e.g., `ViewDelegate`)
+
+### Documentation
+- Use `///` for public API documentation
+- Document complex algorithms and business logic
+- Use `// MARK:` to organize code sections
+- Keep comments up-to-date with code changes
+
+## Testing
+
+### Unit Tests
+- Write tests for business logic and ViewModels
+- Use `XCTest` framework
+- Test edge cases and error conditions
+- Mock dependencies for isolated testing
+- Aim for high code coverage on critical paths
+
+### UI Tests
+- Use SwiftUI previews for rapid iteration
+- Test user flows with UI tests when appropriate
+- Use `#Preview` macro for SwiftUI previews
+- Test on different screen sizes and configurations
+
+## Performance & Optimization
+
+### Build Performance
+- Use `private` to enable whole-module optimization
+- Minimize `@Published` properties (only publish what's needed)
+- Use `@Published` sparingly - prefer manual `objectWillChange.send()`
+- Avoid unnecessary view updates
+
+### Runtime Performance
+- Profile with Instruments before optimizing
+- Use `lazy` for expensive computations
+- Cache expensive operations
+- Minimize work on main thread
+- Use appropriate data structures for performance-critical code
+
+## Dependencies & Package Management
+
+### Swift Package Manager
+- Prefer SPM over CocoaPods when possible
+- Pin dependencies to specific versions
+- Keep dependencies up-to-date for security
+- Document why each dependency is needed
+
+### External Libraries
+- Minimize dependencies - prefer native APIs
+- Evaluate library maintenance and community support
+- Consider licensing implications
+- Document external dependencies
+
+## Security & Privacy
+
+### Data Protection
+- Use Keychain for sensitive data
+- Encrypt sensitive data at rest
+- Use secure network communication (HTTPS)
+- Validate and sanitize user input
+- Follow macOS privacy guidelines
+
+### Permissions
+- Request permissions only when needed
+- Explain why permissions are needed
+- Handle permission denials gracefully
+- Respect user privacy choices
+
+## Common Pitfalls to Avoid
+
+- Don't create ObservableObjects in view body - use `@StateObject`
+- Don't perform heavy work on main thread
+- Don't ignore errors - handle them appropriately
+- Don't use force unwrapping without certainty
+- Don't create retain cycles with strong references
+- Don't update UI from background threads
+- Don't store large objects in `@Published` unnecessarily
+- Don't create views conditionally without proper identity
+- Don't ignore memory warnings
+- Don't block the main thread
+
+## Code Review Checklist
+
+- [ ] No force unwraps without justification
+- [ ] Proper access control (private by default)
+- [ ] No retain cycles
+- [ ] Main thread for UI updates
+- [ ] Error handling in place
+- [ ] Appropriate use of async/await
+- [ ] Views are composable and reusable
+- [ ] State management follows SwiftUI patterns
+- [ ] Follows macOS HIG where applicable
+- [ ] Performance considerations addressed
+
