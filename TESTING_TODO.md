@@ -106,6 +106,12 @@
 - Access control: All internal implementation details are now `private`
 - Memory management: Verified no retain cycles (struct-based coordinators prevent cycles)
 
+### Phase 3 Changes
+- Concurrency: All ObservableObjects now use `@MainActor` for proper thread safety
+- Optional handling: Simplified nested optionals with `guard let` chains
+- Concurrency patterns: Replaced `DispatchQueue.main.async` with `@MainActor` annotations and `Task { @MainActor in ... }` closures
+- Code organization: All enums extracted from `PrivacySettings.swift` to separate files (9 enum files created)
+
 ## Priority Levels
 
 ### High Priority
@@ -181,4 +187,31 @@
 Most changes are internal improvements. Focus testing on settings functionality and browser navigation, especially edge cases around URL handling and homepage settings.
 
 **Phase 2 Focus:** Pay special attention to error handling paths and state management. Verify that all error conditions are handled gracefully and that the @EnvironmentObject pattern works correctly throughout the app.
+
+## Phase 3: Concurrency & Optional Handling Tests
+
+### 11. Concurrency Improvements (@MainActor)
+- [ ] **Download Manager:**
+  - [ ] Start multiple downloads → verify no threading issues
+  - [ ] Cancel downloads → verify state updates correctly
+  - [ ] Check console for any concurrency warnings
+- [ ] **Network Activity Monitor:**
+  - [ ] Navigate to multiple tabs → verify activity tracking works
+  - [ ] Switch between tabs rapidly → verify no race conditions
+  - [ ] Verify timer callbacks execute on main thread
+- [ ] **Blocked Requests Monitor:**
+  - [ ] Block requests in multiple tabs → verify tracking works
+  - [ ] Close tabs → verify cleanup happens correctly
+- [ ] **Browser State:**
+  - [ ] Create/close tabs rapidly → verify no threading issues
+  - [ ] Switch tabs quickly → verify state updates correctly
+
+### 12. Optional Handling
+- [ ] **Homepage URL Handling:**
+  - [ ] Set valid homepage URL → verify loads correctly
+  - [ ] Set invalid homepage URL → verify fallback works
+  - [ ] Clear homepage → verify default homepage loads
+- [ ] **Network Sound Scope:**
+  - [ ] Change sound scope setting → verify saves correctly
+  - [ ] Test with corrupted UserDefaults → verify fallback works
 

@@ -109,7 +109,7 @@ struct GeneralSettingsView: View {
                         }
                         Spacer()
                         Picker("", selection: $settings.throbberSize) {
-                            ForEach(PrivacySettings.ThrobberSize.allCases, id: \.self) { size in
+                            ForEach(ThrobberSize.allCases, id: \.self) { size in
                                 Text(size.displayName).tag(size)
                             }
                         }

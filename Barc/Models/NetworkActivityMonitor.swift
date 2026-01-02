@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 
+@MainActor
 final class NetworkActivityMonitor: ObservableObject {
     static let shared = NetworkActivityMonitor()
 
@@ -63,46 +64,50 @@ final class NetworkActivityMonitor: ObservableObject {
     }
 
     func reportTransmit(tabId: UUID? = nil) {
-        DispatchQueue.main.async {
-            self.lastTransmitTabId = tabId
+        lastTransmitTabId = tabId
 
-            // Track per-tab transmitting state for background tab indicators
-            if let tabId = tabId {
-                self.transmittingTabIds.insert(tabId)
-                self.tabTransmitTimers[tabId]?.invalidate()
-                self.tabTransmitTimers[tabId] = Timer.scheduledTimer(withTimeInterval: self.tabActivityDuration, repeats: false) { [weak self] _ in
+        // Track per-tab transmitting state for background tab indicators
+        if let tabId = tabId {
+            transmittingTabIds.insert(tabId)
+            tabTransmitTimers[tabId]?.invalidate()
+            tabTransmitTimers[tabId] = Timer.scheduledTimer(withTimeInterval: tabActivityDuration, repeats: false) { [weak self] _ in
+                Task { @MainActor in
                     self?.transmittingTabIds.remove(tabId)
                     self?.tabTransmitTimers.removeValue(forKey: tabId)
                 }
             }
+        }
 
-            // Always update isTransmitting (used by sounds which have their own scope setting)
-            self.isTransmitting = true
-            self.txTimer?.invalidate()
-            self.txTimer = Timer.scheduledTimer(withTimeInterval: self.activityDuration, repeats: false) { [weak self] _ in
+        // Always update isTransmitting (used by sounds which have their own scope setting)
+        isTransmitting = true
+        txTimer?.invalidate()
+        txTimer = Timer.scheduledTimer(withTimeInterval: activityDuration, repeats: false) { [weak self] _ in
+            Task { @MainActor in
                 self?.isTransmitting = false
             }
         }
     }
 
     func reportReceive(tabId: UUID? = nil) {
-        DispatchQueue.main.async {
-            self.lastReceiveTabId = tabId
+        lastReceiveTabId = tabId
 
-            // Track per-tab receiving state for background tab indicators
-            if let tabId = tabId {
-                self.receivingTabIds.insert(tabId)
-                self.tabReceiveTimers[tabId]?.invalidate()
-                self.tabReceiveTimers[tabId] = Timer.scheduledTimer(withTimeInterval: self.tabActivityDuration, repeats: false) { [weak self] _ in
+        // Track per-tab receiving state for background tab indicators
+        if let tabId = tabId {
+            receivingTabIds.insert(tabId)
+            tabReceiveTimers[tabId]?.invalidate()
+            tabReceiveTimers[tabId] = Timer.scheduledTimer(withTimeInterval: tabActivityDuration, repeats: false) { [weak self] _ in
+                Task { @MainActor in
                     self?.receivingTabIds.remove(tabId)
                     self?.tabReceiveTimers.removeValue(forKey: tabId)
                 }
             }
+        }
 
-            // Always update isReceiving (used by sounds which have their own scope setting)
-            self.isReceiving = true
-            self.rxTimer?.invalidate()
-            self.rxTimer = Timer.scheduledTimer(withTimeInterval: self.activityDuration, repeats: false) { [weak self] _ in
+        // Always update isReceiving (used by sounds which have their own scope setting)
+        isReceiving = true
+        rxTimer?.invalidate()
+        rxTimer = Timer.scheduledTimer(withTimeInterval: activityDuration, repeats: false) { [weak self] _ in
+            Task { @MainActor in
                 self?.isReceiving = false
             }
         }

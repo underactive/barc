@@ -80,7 +80,9 @@ final class NetworkSoundManager: ObservableObject {
         self.rxEnabled = UserDefaults.standard.bool(forKey: "sound.rxEnabled")
         self.txEnabled = UserDefaults.standard.bool(forKey: "sound.txEnabled")
         self.volume = UserDefaults.standard.float(forKey: "sound.volume")
-        self.soundScope = NetworkSoundScope(rawValue: UserDefaults.standard.string(forKey: "sound.scope") ?? "activeTabOnly") ?? .activeTabOnly
+        
+        let scopeString = UserDefaults.standard.string(forKey: "sound.scope") ?? "activeTabOnly"
+        self.soundScope = NetworkSoundScope(rawValue: scopeString) ?? .activeTabOnly
 
         if isEnabled {
             setupAudioEngine()
@@ -91,37 +93,39 @@ final class NetworkSoundManager: ObservableObject {
     }
 
     private func setupNetworkObservers() {
-        let monitor = NetworkActivityMonitor.shared
+        Task { @MainActor in
+            let monitor = NetworkActivityMonitor.shared
 
-        // Observe transmitting changes
-        monitor.$isTransmitting
-            .removeDuplicates()
-            .sink { [weak self] isTransmitting in
-                guard let self = self, self.isEnabled, self.txEnabled else { return }
-                if isTransmitting && !self.lastTxState {
-                    // Check if we should play based on sound scope
-                    if self.soundScope == .allTabs || monitor.lastTransmitWasActiveTab {
-                        self.playTxSound()
+            // Observe transmitting changes
+            monitor.$isTransmitting
+                .removeDuplicates()
+                .sink { [weak self] isTransmitting in
+                    guard let self = self, self.isEnabled, self.txEnabled else { return }
+                    if isTransmitting && !self.lastTxState {
+                        // Check if we should play based on sound scope
+                        if self.soundScope == .allTabs || monitor.lastTransmitWasActiveTab {
+                            self.playTxSound()
+                        }
                     }
+                    self.lastTxState = isTransmitting
                 }
-                self.lastTxState = isTransmitting
-            }
-            .store(in: &cancellables)
+                .store(in: &cancellables)
 
-        // Observe receiving changes
-        monitor.$isReceiving
-            .removeDuplicates()
-            .sink { [weak self] isReceiving in
-                guard let self = self, self.isEnabled, self.rxEnabled else { return }
-                if isReceiving && !self.lastRxState {
-                    // Check if we should play based on sound scope
-                    if self.soundScope == .allTabs || monitor.lastReceiveWasActiveTab {
-                        self.playRxSound()
+            // Observe receiving changes
+            monitor.$isReceiving
+                .removeDuplicates()
+                .sink { [weak self] isReceiving in
+                    guard let self = self, self.isEnabled, self.rxEnabled else { return }
+                    if isReceiving && !self.lastRxState {
+                        // Check if we should play based on sound scope
+                        if self.soundScope == .allTabs || monitor.lastReceiveWasActiveTab {
+                            self.playRxSound()
+                        }
                     }
+                    self.lastRxState = isReceiving
                 }
-                self.lastRxState = isReceiving
-            }
-            .store(in: &cancellables)
+                .store(in: &cancellables)
+        }
     }
 
     private func setupAudioEngine() {

@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 
 /// Tracks blocked requests per tab for displaying feedback to users
+@MainActor
 final class BlockedRequestsMonitor: ObservableObject {
     static let shared = BlockedRequestsMonitor()
 
@@ -71,32 +72,26 @@ final class BlockedRequestsMonitor: ObservableObject {
 
     /// Report a blocked request
     func reportBlocked(domain: String, url: String, tabId: UUID, reason: BlockedRequest.BlockReason) {
-        DispatchQueue.main.async {
-            let request = BlockedRequest(
-                domain: domain,
-                url: url,
-                timestamp: Date(),
-                reason: reason
-            )
+        let request = BlockedRequest(
+            domain: domain,
+            url: url,
+            timestamp: Date(),
+            reason: reason
+        )
 
-            if self.blockedRequestsByTab[tabId] == nil {
-                self.blockedRequestsByTab[tabId] = []
-            }
-            self.blockedRequestsByTab[tabId]?.append(request)
+        if blockedRequestsByTab[tabId] == nil {
+            blockedRequestsByTab[tabId] = []
         }
+        blockedRequestsByTab[tabId]?.append(request)
     }
 
     /// Clear blocked requests for a tab (called on navigation to new page)
     func clearBlocked(for tabId: UUID) {
-        DispatchQueue.main.async {
-            self.blockedRequestsByTab[tabId] = []
-        }
+        blockedRequestsByTab[tabId] = []
     }
 
     /// Clear all blocked requests for a tab (called when tab is closed)
     func removeTab(_ tabId: UUID) {
-        DispatchQueue.main.async {
-            self.blockedRequestsByTab.removeValue(forKey: tabId)
-        }
+        blockedRequestsByTab.removeValue(forKey: tabId)
     }
 }

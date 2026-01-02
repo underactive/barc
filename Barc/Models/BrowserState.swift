@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 import WebKit
 
+@MainActor
 final class BrowserState: ObservableObject {
     @Published var tabs: [Tab] = []
     @Published var selectedTabId: UUID? {
@@ -30,15 +31,15 @@ final class BrowserState: ObservableObject {
     }
 
     var homePageURL: URL {
-        if let url = URL(string: settings.homePage) {
-            return url
-        }
-        // Fallback to default homepage if settings URL is invalid
-        if let defaultURL = URL(string: "https://kagi.com") {
+        guard let url = URL(string: settings.homePage) else {
+            // Fallback to default homepage if settings URL is invalid
+            guard let defaultURL = URL(string: "https://kagi.com") else {
+                // Last resort: about:blank is guaranteed to be valid
+                return URL(string: "about:blank")!
+            }
             return defaultURL
         }
-        // Last resort: about:blank is guaranteed to be valid
-        return URL(string: "about:blank")!
+        return url
     }
 
     init() {

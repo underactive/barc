@@ -28,6 +28,15 @@
 		A1000010238A0005 /* LeftAlignedTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000035238A0001 /* LeftAlignedTextField.swift */; };
 		A1000010238A0006 /* SettingsComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000036238A0001 /* SettingsComponents.swift */; };
 		A1000010238A0007 /* GeneralSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000037238A0001 /* GeneralSettingsView.swift */; };
+		A1000010238A0008 /* SearchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000038238A0001 /* SearchEngine.swift */; };
+		A1000010238A0009 /* NewTabBehavior.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000039238A0001 /* NewTabBehavior.swift */; };
+		A1000010238A0010 /* HTTPSOnlyMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003A238A0001 /* HTTPSOnlyMode.swift */; };
+		A1000010238A0011 /* NetworkSoundScope.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003B238A0001 /* NetworkSoundScope.swift */; };
+		A1000010238A0012 /* SpoofedResolution.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003C238A0001 /* SpoofedResolution.swift */; };
+		A1000010238A0013 /* SpoofedTimezone.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003D238A0001 /* SpoofedTimezone.swift */; };
+		A1000010238A0014 /* SpoofedLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003E238A0001 /* SpoofedLanguage.swift */; };
+		A1000010238A0015 /* ReferrerPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003F238A0001 /* ReferrerPolicy.swift */; };
+		A1000010238A0016 /* ThrobberSize.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000040238A0001 /* ThrobberSize.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -55,6 +64,15 @@
 		A1000035238A0001 /* LeftAlignedTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeftAlignedTextField.swift; sourceTree = "<group>"; };
 		A1000036238A0001 /* SettingsComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsComponents.swift; sourceTree = "<group>"; };
 		A1000037238A0001 /* GeneralSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsView.swift; sourceTree = "<group>"; };
+		A1000038238A0001 /* SearchEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchEngine.swift; sourceTree = "<group>"; };
+		A1000039238A0001 /* NewTabBehavior.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewTabBehavior.swift; sourceTree = "<group>"; };
+		A100003A238A0001 /* HTTPSOnlyMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPSOnlyMode.swift; sourceTree = "<group>"; };
+		A100003B238A0001 /* NetworkSoundScope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkSoundScope.swift; sourceTree = "<group>"; };
+		A100003C238A0001 /* SpoofedResolution.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpoofedResolution.swift; sourceTree = "<group>"; };
+		A100003D238A0001 /* SpoofedTimezone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpoofedTimezone.swift; sourceTree = "<group>"; };
+		A100003E238A0001 /* SpoofedLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpoofedLanguage.swift; sourceTree = "<group>"; };
+		A100003F238A0001 /* ReferrerPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReferrerPolicy.swift; sourceTree = "<group>"; };
+		A1000040238A0001 /* ThrobberSize.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThrobberSize.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -126,6 +144,15 @@
 				A100001F238A0001 /* BlockedRequestsMonitor.swift */,
 				A1000030238A0001 /* Download.swift */,
 				A1000031238A0001 /* DownloadManager.swift */,
+				A1000038238A0001 /* SearchEngine.swift */,
+				A1000039238A0001 /* NewTabBehavior.swift */,
+				A100003A238A0001 /* HTTPSOnlyMode.swift */,
+				A100003B238A0001 /* NetworkSoundScope.swift */,
+				A100003C238A0001 /* SpoofedResolution.swift */,
+				A100003D238A0001 /* SpoofedTimezone.swift */,
+				A100003E238A0001 /* SpoofedLanguage.swift */,
+				A100003F238A0001 /* ReferrerPolicy.swift */,
+				A1000040238A0001 /* ThrobberSize.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -227,6 +254,15 @@
 				A1000010238A0005 /* LeftAlignedTextField.swift in Sources */,
 				A1000010238A0006 /* SettingsComponents.swift in Sources */,
 				A1000010238A0007 /* GeneralSettingsView.swift in Sources */,
+				A1000010238A0008 /* SearchEngine.swift in Sources */,
+				A1000010238A0009 /* NewTabBehavior.swift in Sources */,
+				A1000010238A0010 /* HTTPSOnlyMode.swift in Sources */,
+				A1000010238A0011 /* NetworkSoundScope.swift in Sources */,
+				A1000010238A0012 /* SpoofedResolution.swift in Sources */,
+				A1000010238A0013 /* SpoofedTimezone.swift in Sources */,
+				A1000010238A0014 /* SpoofedLanguage.swift in Sources */,
+				A1000010238A0015 /* ReferrerPolicy.swift in Sources */,
+				A1000010238A0016 /* ThrobberSize.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

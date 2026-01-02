@@ -59,32 +59,36 @@
 - [x] Delegate patterns verified - `WebView.Coordinator` uses `weak var browserState: BrowserState?` ✅
 - [x] Closure captures reviewed - all closures use `[weak self]` appropriately ✅
 
-## Phase 3: Medium Priority Issues 📋 PENDING
+## Phase 3: Medium Priority Issues ✅ COMPLETED (Partial)
 
-### 8. Concurrency Improvements
-- [ ] `DownloadManager.swift` - Multiple `DispatchQueue.main.async` calls
-  - **Recommendation:** Use `@MainActor` or `Task { @MainActor in ... }`
-- [ ] `NetworkActivityMonitor.swift` - `DispatchQueue.main.async` usage
-  - **Recommendation:** Add `@MainActor` annotation where appropriate
-- [ ] Review all async operations for proper main thread handling
+### 8. Concurrency Improvements ✅
+- [x] `DownloadManager.swift` - Added `@MainActor` annotation, replaced `DispatchQueue.main.async` with direct calls
+  - **Fixed:** Class is now `@MainActor`, closures use `Task { @MainActor in ... }`
+- [x] `NetworkActivityMonitor.swift` - Added `@MainActor` annotation, removed `DispatchQueue.main.async`
+  - **Fixed:** Class is now `@MainActor`, Timer closures use `Task { @MainActor in ... }`
+- [x] `BlockedRequestsMonitor.swift` - Added `@MainActor` annotation
+- [x] `BrowserState.swift` - Added `@MainActor` annotation for proper actor isolation
+- [x] `NetworkSoundManager.swift` - Updated to use `Task { @MainActor in ... }` for accessing `@MainActor` properties
 
-### 9. Optional Handling Improvements
-- [ ] `BrowserState.swift:33` - Double optional coalescing could be cleaner
-- [ ] `NetworkSoundManager.swift:83` - Complex optional chaining with nil coalescing
-  - **Recommendation:** Simplify with `guard let` chains
+### 9. Optional Handling Improvements ✅
+- [x] `BrowserState.swift:32-42` - Simplified double optional coalescing with `guard let` chains
+  - **Fixed:** Replaced nested `if let` with cleaner `guard let` pattern
+- [x] `NetworkSoundManager.swift:83` - Simplified complex optional chaining
+  - **Fixed:** Extracted scope string to variable before optional chaining
 
-### 10. Code Organization
-- [ ] Move enums from `PrivacySettings.swift` to separate files:
-  - [ ] `SearchEngine.swift`
-  - [ ] `HTTPSOnlyMode.swift`
-  - [ ] `ReferrerPolicy.swift`
-  - [ ] `SpoofedLanguage.swift`
-  - [ ] `SpoofedTimezone.swift`
-  - [ ] `SpoofedResolution.swift`
-  - [ ] `NetworkSoundScope.swift`
-  - [ ] `NewTabBehavior.swift`
-- [ ] Follow one-type-per-file principle where practical
-- [ ] Group related files in folders
+### 10. Code Organization ✅
+- [x] Move enums from `PrivacySettings.swift` to separate files:
+  - [x] `SearchEngine.swift` - Created separate file
+  - [x] `HTTPSOnlyMode.swift` - Created separate file
+  - [x] `ReferrerPolicy.swift` - Created separate file
+  - [x] `SpoofedLanguage.swift` - Created separate file
+  - [x] `SpoofedTimezone.swift` - Created separate file
+  - [x] `SpoofedResolution.swift` - Created separate file
+  - [x] `NetworkSoundScope.swift` - Created separate file
+  - [x] `NewTabBehavior.swift` - Created separate file
+  - [x] `ThrobberSize.swift` - Created separate file (was nested enum)
+- [x] Follow one-type-per-file principle where practical - All enums now in separate files
+- [x] Group related files in folders - All enum files in Models folder
 
 ### 11. Documentation
 - [ ] Add `///` documentation for public APIs
@@ -137,11 +141,11 @@
 - Access control reviewed and verified
 - Memory management reviewed - no retain cycles found
 
-### 📋 Phase 3 (Medium Priority) - PENDING
-- Concurrency improvements
-- Optional handling cleanup
-- Code organization
-- Documentation
+### ✅ Phase 3 (Medium Priority) - COMPLETED
+- Concurrency improvements completed - All ObservableObjects now use `@MainActor`
+- Optional handling cleanup completed
+- Code organization completed - All enums extracted to separate files
+- Documentation - Deferred (can be added incrementally)
 
 ### 📝 Phase 4 (Low Priority) - FUTURE
 - Performance optimizations

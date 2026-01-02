@@ -73,6 +73,7 @@ enum VideoFormat: String, CaseIterable, Identifiable {
     }
 }
 
+@MainActor
 final class DownloadManager: ObservableObject {
     static let shared = DownloadManager()
 
@@ -96,9 +97,7 @@ final class DownloadManager: ObservableObject {
     func startDownload(url: URL, pageTitle: String, format: VideoFormat = .best) -> Download {
         let download = Download(url: url, pageTitle: pageTitle, format: format)
 
-        DispatchQueue.main.async {
-            self.downloads.insert(download, at: 0)
-        }
+        downloads.insert(download, at: 0)
 
         if activeDownloadCount < maxConcurrentDownloads {
             runYtdlp(for: download)
@@ -116,10 +115,8 @@ final class DownloadManager: ObservableObject {
             processes.removeValue(forKey: download.id)
         }
 
-        DispatchQueue.main.async {
-            download.status = .cancelled
-            self.activeDownloadCount = max(0, self.activeDownloadCount - 1)
-        }
+        download.status = .cancelled
+        activeDownloadCount = max(0, activeDownloadCount - 1)
 
         // Remove from pending queue if present
         pendingQueue.removeAll { $0.id == download.id }
@@ -141,17 +138,12 @@ final class DownloadManager: ObservableObject {
 
     func removeDownload(_ download: Download) {
         cancelDownload(download)
-
-        DispatchQueue.main.async {
-            self.downloads.removeAll { $0.id == download.id }
-        }
+        downloads.removeAll { $0.id == download.id }
     }
 
     func clearCompleted() {
-        DispatchQueue.main.async {
-            self.downloads.removeAll {
-                $0.status == .completed || $0.status == .cancelled
-            }
+        downloads.removeAll {
+            $0.status == .completed || $0.status == .cancelled
         }
     }
 
@@ -164,20 +156,16 @@ final class DownloadManager: ObservableObject {
 
     private func runYtdlp(for download: Download) {
         guard let ytdlp = ytdlpPath else {
-            DispatchQueue.main.async {
-                download.status = .failed
-                download.errorMessage = "yt-dlp binary not found in app bundle"
-            }
+            download.status = .failed
+            download.errorMessage = "yt-dlp binary not found in app bundle"
             return
         }
 
         // Verify binary exists and is executable
         let fileManager = FileManager.default
         guard fileManager.isExecutableFile(atPath: ytdlp.path) else {
-            DispatchQueue.main.async {
-                download.status = .failed
-                download.errorMessage = "yt-dlp binary is not executable"
-            }
+            download.status = .failed
+            download.errorMessage = "yt-dlp binary is not executable"
             return
         }
 
@@ -196,10 +184,8 @@ final class DownloadManager: ObservableObject {
                 attributes: nil
             )
         } catch {
-            DispatchQueue.main.async {
-                download.status = .failed
-                download.errorMessage = "Failed to create download directory: \(error.localizedDescription)"
-            }
+            download.status = .failed
+            download.errorMessage = "Failed to create download directory: \(error.localizedDescription)"
             print("[Barc Download] Failed to create directory: \(error.localizedDescription)")
             return
         }
@@ -237,7 +223,7 @@ final class DownloadManager: ObservableObject {
                   let line = String(data: data, encoding: .utf8),
                   let download = download else { return }
 
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 self?.parseOutputLine(line, for: download)
             }
         }
@@ -257,7 +243,7 @@ final class DownloadManager: ObservableObject {
             let stderrMessage = String(data: stderrData, encoding: .utf8)?
                 .trimmingCharacters(in: .whitespacesAndNewlines)
 
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 if process.terminationStatus != 0 && !stderrMessage.isNilOrEmpty {
                     download.errorMessage = stderrMessage
                     print("[Barc Download] Error: \(stderrMessage ?? "unknown")")
@@ -269,16 +255,11 @@ final class DownloadManager: ObservableObject {
         do {
             try process.run()
             processes[download.id] = process
-
-            DispatchQueue.main.async {
-                download.status = .downloading
-                self.activeDownloadCount += 1
-            }
+            download.status = .downloading
+            activeDownloadCount += 1
         } catch {
-            DispatchQueue.main.async {
-                download.status = .failed
-                download.errorMessage = error.localizedDescription
-            }
+            download.status = .failed
+            download.errorMessage = error.localizedDescription
         }
     }
 
