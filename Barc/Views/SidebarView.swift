@@ -127,6 +127,12 @@ struct TabRowView: View {
 
             Spacer()
 
+            // Speaker icon (audio playing indicator)
+            if tab.isPlayingAudio {
+                AnimatedSpeakerIcon()
+                    .padding(.trailing, 4)
+            }
+
             // Close button OR network indicators
             ZStack {
                 // Network activity indicators (vertical stack: Tx on top, Rx below)
@@ -192,6 +198,52 @@ struct TabNetworkDot: View {
             .shadow(color: isActive ? activeColor.opacity(0.6) : .clear, radius: 2)
             .opacity(isActive ? 1 : 0)
             .animation(isActive ? .none : .easeOut(duration: 0.75), value: isActive)
+    }
+}
+
+struct AnimatedSpeakerIcon: View {
+    @State private var animationPhase: Int = 0
+    @State private var animationTimer: Timer?
+
+    var body: some View {
+        ZStack {
+            switch animationPhase {
+            case 0:
+                Image(systemName: "speaker.wave.1.fill")
+                    .font(.system(size: 10))
+                    .foregroundColor(.blue)
+            case 1:
+                Image(systemName: "speaker.wave.2.fill")
+                    .font(.system(size: 10))
+                    .foregroundColor(.blue)
+            default:
+                Image(systemName: "speaker.wave.3.fill")
+                    .font(.system(size: 10))
+                    .foregroundColor(.blue)
+            }
+        }
+        .frame(width: 18, height: 14, alignment: .leading)
+        .onAppear {
+            startAnimation()
+        }
+        .onDisappear {
+            stopAnimation()
+        }
+    }
+
+    private func startAnimation() {
+        // Clean up any existing timer first
+        stopAnimation()
+
+        animationTimer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { timer in
+            // Don't use withAnimation - it causes flickering crossfade between icons
+            animationPhase = (animationPhase + 1) % 3
+        }
+    }
+
+    private func stopAnimation() {
+        animationTimer?.invalidate()
+        animationTimer = nil
     }
 }
 

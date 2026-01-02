@@ -347,6 +347,7 @@ struct WebView: NSViewRepresentable {
     static let networkMessageHandler = "barcNetwork"
     static let elementPickerMessageHandler = "barcElementPicker"
     static let videoDownloadMessageHandler = "barcVideoDownload"
+    static let audioPlaybackMessageHandler = "barcAudioPlayback"
 
     func makeNSView(context: Context) -> BarcWebView {
         let configuration = createPrivacyConfiguration(coordinator: context.coordinator)
@@ -432,6 +433,9 @@ struct WebView: NSViewRepresentable {
         // Add message handler for video download context menu
         contentController.add(coordinator, name: Self.videoDownloadMessageHandler)
 
+        // Add message handler for audio playback detection
+        contentController.add(coordinator, name: Self.audioPlaybackMessageHandler)
+
         // Inject network monitoring script (must be first, before privacy scripts)
         injectNetworkMonitoringScript(into: contentController)
 
@@ -440,6 +444,9 @@ struct WebView: NSViewRepresentable {
 
         // Inject video detection script for download context menu
         injectVideoDetectionScript(into: contentController)
+
+        // Inject audio playback detection script
+        injectAudioPlaybackDetectionScript(into: contentController)
 
         configuration.userContentController = contentController
 
@@ -2153,6 +2160,174 @@ struct WebView: NSViewRepresentable {
         controller.addUserScript(userScript)
     }
 
+    private func injectAudioPlaybackDetectionScript(into controller: WKUserContentController) {
+        let script = """
+        (function() {
+            if (window.__barcAudioDetectionInstalled) return;
+            window.__barcAudioDetectionInstalled = true;
+
+            let playingElements = new Set();
+            let pollingInterval = null;
+
+            function updatePlaybackStatus() {
+                // Filter out muted or paused elements
+                const actuallyPlayingElements = Array.from(playingElements).filter(element => {
+                    return !element.paused && !element.muted && element.duration > 0;
+                });
+
+                const isPlaying = actuallyPlayingElements.length > 0;
+                try {
+                    window.webkit.messageHandlers.\(Self.audioPlaybackMessageHandler).postMessage({
+                        isPlaying: isPlaying
+                    });
+                } catch(e) {}
+            }
+
+            function monitorMediaElement(element) {
+                if (element.__barcAudioMonitored) return;
+                element.__barcAudioMonitored = true;
+
+                element.addEventListener('play', () => {
+                    playingElements.add(element);
+                    updatePlaybackStatus();
+                });
+
+                element.addEventListener('pause', () => {
+                    playingElements.delete(element);
+                    updatePlaybackStatus();
+                });
+
+                element.addEventListener('ended', () => {
+                    playingElements.delete(element);
+                    updatePlaybackStatus();
+                });
+
+                // Listen for volume/mute changes
+                element.addEventListener('volumechange', () => {
+                    updatePlaybackStatus();
+                });
+
+                // Listen for when metadata is loaded (duration becomes available)
+                element.addEventListener('loadedmetadata', () => {
+                    if (!element.paused && !element.muted) {
+                        playingElements.add(element);
+                        updatePlaybackStatus();
+                    }
+                });
+
+                // Check if already playing (handle autoplay)
+                // Check readyState instead of just duration, as duration may not be available yet
+                if (!element.paused && element.readyState > 0) {
+                    playingElements.add(element);
+                    updatePlaybackStatus();
+                }
+            }
+
+            // Monitor existing media elements
+            document.querySelectorAll('video, audio').forEach(monitorMediaElement);
+
+            // Monitor dynamically added media elements
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeName === 'VIDEO' || node.nodeName === 'AUDIO') {
+                            monitorMediaElement(node);
+                        }
+                        if (node.querySelectorAll) {
+                            node.querySelectorAll('video, audio').forEach(monitorMediaElement);
+                        }
+                    });
+                });
+            });
+            observer.observe(document.documentElement, { childList: true, subtree: true });
+
+            // Clear state when page unloads or navigates
+            window.addEventListener('beforeunload', () => {
+                if (pollingInterval) {
+                    clearInterval(pollingInterval);
+                    pollingInterval = null;
+                }
+                playingElements.clear();
+                try {
+                    window.webkit.messageHandlers.\(Self.audioPlaybackMessageHandler).postMessage({
+                        isPlaying: false
+                    });
+                } catch(e) {}
+            });
+
+            // Also clear on page hide (for bfcache navigation)
+            window.addEventListener('pagehide', () => {
+                if (pollingInterval) {
+                    clearInterval(pollingInterval);
+                    pollingInterval = null;
+                }
+                playingElements.clear();
+                try {
+                    window.webkit.messageHandlers.\(Self.audioPlaybackMessageHandler).postMessage({
+                        isPlaying: false
+                    });
+                } catch(e) {}
+            });
+
+            // Initial status update
+            updatePlaybackStatus();
+
+            // Delayed check for autoplay videos (YouTube often autoplays after a short delay)
+            setTimeout(() => {
+                document.querySelectorAll('video, audio').forEach(element => {
+                    if (!element.paused && !element.muted && element.readyState > 0) {
+                        playingElements.add(element);
+                    }
+                });
+                updatePlaybackStatus();
+            }, 500);
+
+            // Another check after 1 second to catch slower autoplay
+            setTimeout(() => {
+                document.querySelectorAll('video, audio').forEach(element => {
+                    if (!element.paused && !element.muted && element.readyState > 0) {
+                        playingElements.add(element);
+                    }
+                });
+                updatePlaybackStatus();
+            }, 1000);
+
+            // Periodic polling to ensure state is accurate (every 500ms)
+            // This catches edge cases where events might not fire
+            pollingInterval = setInterval(() => {
+                // Re-validate playingElements set
+                let needsUpdate = false;
+                playingElements.forEach(element => {
+                    // Remove elements that are no longer playing or are muted
+                    if (element.paused || element.muted || element.ended || !element.isConnected) {
+                        playingElements.delete(element);
+                        needsUpdate = true;
+                    }
+                });
+
+                // Check for new playing elements that might have been missed
+                document.querySelectorAll('video, audio').forEach(element => {
+                    if (!element.paused && !element.muted && element.readyState > 0 && !playingElements.has(element)) {
+                        playingElements.add(element);
+                        needsUpdate = true;
+                    }
+                });
+
+                if (needsUpdate) {
+                    updatePlaybackStatus();
+                }
+            }, 500);
+        })();
+        """
+
+        let userScript = WKUserScript(
+            source: script,
+            injectionTime: .atDocumentEnd,
+            forMainFrameOnly: true
+        )
+        controller.addUserScript(userScript)
+    }
+
     class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
         let tab: Tab
         let settings: PrivacySettings
@@ -2208,6 +2383,17 @@ struct WebView: NSViewRepresentable {
                         self?.tab.hasDownloadableVideo = hasVideo
                     }
                 }
+                return
+            }
+
+            // Handle audio playback messages
+            if message.name == WebView.audioPlaybackMessageHandler,
+               let body = message.body as? [String: Any],
+               let isPlaying = body["isPlaying"] as? Bool {
+                Task { @MainActor [weak self] in
+                    self?.tab.isPlayingAudio = isPlaying
+                }
+                return
             }
         }
 
@@ -2343,6 +2529,10 @@ struct WebView: NSViewRepresentable {
             networkMonitor.reportTransmit(tabId: tab.id)
             // Clear blocked requests for this tab when navigating to a new page
             blockedRequestsMonitor.clearBlocked(for: tab.id)
+            // Clear audio playing state when navigating to a new page
+            Task { @MainActor [weak self] in
+                self?.tab.isPlayingAudio = false
+            }
         }
 
         func webView(_ webView: WKWebView, didReceiveServerRedirectForProvisionalNavigation navigation: WKNavigation!) {
