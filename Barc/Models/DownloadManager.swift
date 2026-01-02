@@ -189,11 +189,20 @@ final class DownloadManager: ObservableObject {
             .replacingOccurrences(of: "~", with: NSHomeDirectory())
 
         // Create output directory if needed
-        try? fileManager.createDirectory(
-            atPath: outputDir,
-            withIntermediateDirectories: true,
-            attributes: nil
-        )
+        do {
+            try fileManager.createDirectory(
+                atPath: outputDir,
+                withIntermediateDirectories: true,
+                attributes: nil
+            )
+        } catch {
+            DispatchQueue.main.async {
+                download.status = .failed
+                download.errorMessage = "Failed to create download directory: \(error.localizedDescription)"
+            }
+            print("[Barc Download] Failed to create directory: \(error.localizedDescription)")
+            return
+        }
 
         // yt-dlp arguments for progress tracking
         var arguments = [

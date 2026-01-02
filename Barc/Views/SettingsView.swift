@@ -24,7 +24,7 @@ struct SettingsView: View {
 // MARK: - Privacy Settings (Barc-specific)
 
 struct PrivacySettingsView: View {
-    @ObservedObject private var settings = PrivacySettings.shared
+    @EnvironmentObject private var settings: PrivacySettings
     @State private var showingResetConfirmation = false
     @State private var newWhitelistDomain: String = ""
     @State private var newBlockedDomain: String = ""

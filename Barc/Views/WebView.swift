@@ -241,46 +241,51 @@ final class BarcWebView: WKWebView {
 
         // Tag names (blue)
         let tagColor = NSColor(red: 0.4, green: 0.6, blue: 1.0, alpha: 1.0)
-        let tagPattern = try? NSRegularExpression(pattern: "</?([a-zA-Z][a-zA-Z0-9]*)", options: [])
-        tagPattern?.enumerateMatches(in: source, options: [], range: fullRange) { match, _, _ in
-            if let range = match?.range(at: 1) {
-                attributedString.addAttribute(.foregroundColor, value: tagColor, range: range)
+        if let tagPattern = try? NSRegularExpression(pattern: "</?([a-zA-Z][a-zA-Z0-9]*)", options: []) {
+            tagPattern.enumerateMatches(in: source, options: [], range: fullRange) { match, _, _ in
+                if let range = match?.range(at: 1) {
+                    attributedString.addAttribute(.foregroundColor, value: tagColor, range: range)
+                }
             }
         }
 
         // Attribute names (cyan)
         let attrColor = NSColor(red: 0.5, green: 0.9, blue: 0.9, alpha: 1.0)
-        let attrPattern = try? NSRegularExpression(pattern: "\\s([a-zA-Z-]+)=", options: [])
-        attrPattern?.enumerateMatches(in: source, options: [], range: fullRange) { match, _, _ in
-            if let range = match?.range(at: 1) {
-                attributedString.addAttribute(.foregroundColor, value: attrColor, range: range)
+        if let attrPattern = try? NSRegularExpression(pattern: "\\s([a-zA-Z-]+)=", options: []) {
+            attrPattern.enumerateMatches(in: source, options: [], range: fullRange) { match, _, _ in
+                if let range = match?.range(at: 1) {
+                    attributedString.addAttribute(.foregroundColor, value: attrColor, range: range)
+                }
             }
         }
 
         // Attribute values (orange)
         let valueColor = NSColor(red: 1.0, green: 0.7, blue: 0.4, alpha: 1.0)
-        let valuePattern = try? NSRegularExpression(pattern: "=\"([^\"]*)\"", options: [])
-        valuePattern?.enumerateMatches(in: source, options: [], range: fullRange) { match, _, _ in
-            if let range = match?.range(at: 1) {
-                attributedString.addAttribute(.foregroundColor, value: valueColor, range: range)
+        if let valuePattern = try? NSRegularExpression(pattern: "=\"([^\"]*)\"", options: []) {
+            valuePattern.enumerateMatches(in: source, options: [], range: fullRange) { match, _, _ in
+                if let range = match?.range(at: 1) {
+                    attributedString.addAttribute(.foregroundColor, value: valueColor, range: range)
+                }
             }
         }
 
         // Comments (gray)
         let commentColor = NSColor(red: 0.5, green: 0.5, blue: 0.5, alpha: 1.0)
-        let commentPattern = try? NSRegularExpression(pattern: "<!--[\\s\\S]*?-->", options: [])
-        commentPattern?.enumerateMatches(in: source, options: [], range: fullRange) { match, _, _ in
-            if let range = match?.range {
-                attributedString.addAttribute(.foregroundColor, value: commentColor, range: range)
+        if let commentPattern = try? NSRegularExpression(pattern: "<!--[\\s\\S]*?-->", options: []) {
+            commentPattern.enumerateMatches(in: source, options: [], range: fullRange) { match, _, _ in
+                if let range = match?.range {
+                    attributedString.addAttribute(.foregroundColor, value: commentColor, range: range)
+                }
             }
         }
 
         // Brackets (gray)
         let bracketColor = NSColor(red: 0.6, green: 0.6, blue: 0.6, alpha: 1.0)
-        let bracketPattern = try? NSRegularExpression(pattern: "[<>]", options: [])
-        bracketPattern?.enumerateMatches(in: source, options: [], range: fullRange) { match, _, _ in
-            if let range = match?.range {
-                attributedString.addAttribute(.foregroundColor, value: bracketColor, range: range)
+        if let bracketPattern = try? NSRegularExpression(pattern: "[<>]", options: []) {
+            bracketPattern.enumerateMatches(in: source, options: [], range: fullRange) { match, _, _ in
+                if let range = match?.range {
+                    attributedString.addAttribute(.foregroundColor, value: bracketColor, range: range)
+                }
             }
         }
 

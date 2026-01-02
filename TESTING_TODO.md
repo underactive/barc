@@ -95,9 +95,16 @@
 
 ## Known Changes (Not Bugs)
 
+### Phase 1 Changes
 - Classes are now `final` (compile-time only, no runtime impact)
 - Code split into separate files (organizational, no behavior change)
 - Force unwraps replaced with safe unwrapping (more robust, may expose previously hidden issues)
+
+### Phase 2 Changes
+- Error handling improved: `try?` replaced with `do-catch` blocks (errors now logged instead of silently ignored)
+- State management: Changed from `@ObservedObject` with singletons to `@EnvironmentObject` pattern
+- Access control: All internal implementation details are now `private`
+- Memory management: Verified no retain cycles (struct-based coordinators prevent cycles)
 
 ## Priority Levels
 
@@ -113,7 +120,65 @@
 ### Low Priority
 - Edge cases with invalid URLs
 
+## Phase 2: Error Handling & State Management Tests
+
+### 7. Error Handling Improvements
+- [ ] **Storage Whitelist JSON Operations:**
+  - [ ] Add domain to whitelist → verify saves correctly
+  - [ ] Remove domain from whitelist → verify updates correctly
+  - [ ] Test with corrupted UserDefaults data → should handle gracefully (no crash)
+  - [ ] Test with invalid JSON in storage → should fallback to empty array
+- [ ] **Custom Blocklist JSON Operations:**
+  - [ ] Add domain to blocklist → verify saves correctly
+  - [ ] Remove domain from blocklist → verify updates correctly
+  - [ ] Test with corrupted UserDefaults data → should handle gracefully
+- [ ] **Download Directory Creation:**
+  - [ ] Start download with valid download path → should create directory if missing
+  - [ ] Start download with invalid path (no permissions) → should fail gracefully with error message
+  - [ ] Start download with read-only directory → should show appropriate error
+- [ ] **WebView Regex Patterns:**
+  - [ ] View page source → should work correctly
+  - [ ] Test with pages containing special characters → should handle properly
+  - [ ] Verify no crashes if regex compilation fails
+
+### 8. State Management (@EnvironmentObject)
+- [ ] **Settings View:**
+  - [ ] Open settings → verify PrivacySettings loads correctly via @EnvironmentObject
+  - [ ] Change privacy settings → verify changes persist
+  - [ ] Close and reopen settings → verify state maintained
+- [ ] **General Settings View:**
+  - [ ] Verify PrivacySettings accessible via @EnvironmentObject
+  - [ ] Verify NetworkSoundManager and NetworkActivityMonitor still work (as @ObservedObject)
+  - [ ] Change settings → verify updates reflect immediately
+- [ ] **Environment Object Propagation:**
+  - [ ] Verify settings are passed correctly from BarcApp → ContentView → SettingsView
+  - [ ] Test with multiple settings windows (if possible) → verify they share state
+
+### 9. Memory Management
+- [ ] **No Retain Cycles:**
+  - [ ] Open and close settings multiple times → verify no memory leaks
+  - [ ] Add/remove domains from whitelist repeatedly → verify no memory buildup
+  - [ ] Start/cancel downloads repeatedly → verify memory released properly
+- [ ] **Delegate Patterns:**
+  - [ ] Test WebView delegate callbacks → verify no retain cycles
+  - [ ] Test text field delegate callbacks → verify no retain cycles
+- [ ] **Closure Captures:**
+  - [ ] Test async operations (downloads, network requests) → verify closures don't leak
+  - [ ] Monitor memory usage during extended use → should remain stable
+
+### 10. Error Recovery & Logging
+- [ ] **Check Console Logs:**
+  - [ ] Verify error messages appear in console for failed operations
+  - [ ] Verify no silent failures (all errors should be logged)
+  - [ ] Test with invalid data → check console for appropriate error messages
+- [ ] **User-Facing Error Handling:**
+  - [ ] Download failures show error message to user
+  - [ ] Settings save failures handled gracefully
+  - [ ] No crashes from error conditions
+
 ## Notes
 
 Most changes are internal improvements. Focus testing on settings functionality and browser navigation, especially edge cases around URL handling and homepage settings.
+
+**Phase 2 Focus:** Pay special attention to error handling paths and state management. Verify that all error conditions are handled gracefully and that the @EnvironmentObject pattern works correctly throughout the app.
 

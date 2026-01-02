@@ -42,15 +42,26 @@ final class PrivacySettings: ObservableObject {
     }
 
     private func loadWhitelist() {
-        if let data = UserDefaults.standard.data(forKey: whitelistKey),
-           let domains = try? JSONDecoder().decode([String].self, from: data) {
+        guard let data = UserDefaults.standard.data(forKey: whitelistKey) else {
+            return
+        }
+        
+        do {
+            let domains = try JSONDecoder().decode([String].self, from: data)
             whitelistedDomains = domains
+        } catch {
+            print("[Barc] Failed to decode whitelist: \(error.localizedDescription)")
+            // Reset to empty array on decode failure
+            whitelistedDomains = []
         }
     }
 
     private func saveWhitelist() {
-        if let data = try? JSONEncoder().encode(whitelistedDomains) {
+        do {
+            let data = try JSONEncoder().encode(whitelistedDomains)
             UserDefaults.standard.set(data, forKey: whitelistKey)
+        } catch {
+            print("[Barc] Failed to encode whitelist: \(error.localizedDescription)")
         }
     }
 
@@ -74,15 +85,26 @@ final class PrivacySettings: ObservableObject {
     // MARK: - Custom Blocklist Management
 
     private func loadCustomBlocklist() {
-        if let data = UserDefaults.standard.data(forKey: customBlocklistKey),
-           let domains = try? JSONDecoder().decode([String].self, from: data) {
+        guard let data = UserDefaults.standard.data(forKey: customBlocklistKey) else {
+            return
+        }
+        
+        do {
+            let domains = try JSONDecoder().decode([String].self, from: data)
             customBlockedDomains = domains
+        } catch {
+            print("[Barc] Failed to decode custom blocklist: \(error.localizedDescription)")
+            // Reset to empty array on decode failure
+            customBlockedDomains = []
         }
     }
 
     private func saveCustomBlocklist() {
-        if let data = try? JSONEncoder().encode(customBlockedDomains) {
+        do {
+            let data = try JSONEncoder().encode(customBlockedDomains)
             UserDefaults.standard.set(data, forKey: customBlocklistKey)
+        } catch {
+            print("[Barc] Failed to encode custom blocklist: \(error.localizedDescription)")
         }
     }
 

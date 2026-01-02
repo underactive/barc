@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - General Settings
 
 struct GeneralSettingsView: View {
-    @ObservedObject private var settings = PrivacySettings.shared
+    @EnvironmentObject private var settings: PrivacySettings
     @ObservedObject private var soundManager = NetworkSoundManager.shared
     @ObservedObject private var networkMonitor = NetworkActivityMonitor.shared
     @State private var homePageText: String = ""
