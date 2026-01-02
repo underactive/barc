@@ -10,6 +10,11 @@ import WebKit
 /// - Reference to the underlying WKWebView
 /// 
 /// The WebView reference is weak to avoid retain cycles.
+/// 
+/// All properties are accessed from the main actor since Tab is used by BrowserState
+/// which is @MainActor. However, Tab itself is not @MainActor to allow WebKit
+/// delegate callbacks to update it from any thread (they use DispatchQueue.main.async).
+@MainActor
 final class Tab: Identifiable, ObservableObject {
     let id = UUID()
     @Published var title: String = "New Tab"

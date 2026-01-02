@@ -209,7 +209,11 @@ final class BarcWebView: WKWebView {
         window.center()
 
         // Create scroll view with text view
-        let scrollView = NSScrollView(frame: window.contentView!.bounds)
+        guard let contentView = window.contentView else {
+            print("[Barc] Window has no content view")
+            return
+        }
+        let scrollView = NSScrollView(frame: contentView.bounds)
         scrollView.autoresizingMask = [.width, .height]
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = true
@@ -248,52 +252,67 @@ final class BarcWebView: WKWebView {
 
         // Tag names (blue)
         let tagColor = NSColor(red: 0.4, green: 0.6, blue: 1.0, alpha: 1.0)
-        if let tagPattern = try? NSRegularExpression(pattern: "</?([a-zA-Z][a-zA-Z0-9]*)", options: []) {
+        do {
+            let tagPattern = try NSRegularExpression(pattern: "</?([a-zA-Z][a-zA-Z0-9]*)", options: [])
             tagPattern.enumerateMatches(in: source, options: [], range: fullRange) { match, _, _ in
                 if let range = match?.range(at: 1) {
                     attributedString.addAttribute(.foregroundColor, value: tagColor, range: range)
                 }
             }
+        } catch {
+            print("[Barc] Error creating tag regex pattern: \(error.localizedDescription)")
         }
 
         // Attribute names (cyan)
         let attrColor = NSColor(red: 0.5, green: 0.9, blue: 0.9, alpha: 1.0)
-        if let attrPattern = try? NSRegularExpression(pattern: "\\s([a-zA-Z-]+)=", options: []) {
+        do {
+            let attrPattern = try NSRegularExpression(pattern: "\\s([a-zA-Z-]+)=", options: [])
             attrPattern.enumerateMatches(in: source, options: [], range: fullRange) { match, _, _ in
                 if let range = match?.range(at: 1) {
                     attributedString.addAttribute(.foregroundColor, value: attrColor, range: range)
                 }
             }
+        } catch {
+            print("[Barc] Error creating attribute regex pattern: \(error.localizedDescription)")
         }
 
         // Attribute values (orange)
         let valueColor = NSColor(red: 1.0, green: 0.7, blue: 0.4, alpha: 1.0)
-        if let valuePattern = try? NSRegularExpression(pattern: "=\"([^\"]*)\"", options: []) {
+        do {
+            let valuePattern = try NSRegularExpression(pattern: "=\"([^\"]*)\"", options: [])
             valuePattern.enumerateMatches(in: source, options: [], range: fullRange) { match, _, _ in
                 if let range = match?.range(at: 1) {
                     attributedString.addAttribute(.foregroundColor, value: valueColor, range: range)
                 }
             }
+        } catch {
+            print("[Barc] Error creating value regex pattern: \(error.localizedDescription)")
         }
 
         // Comments (gray)
         let commentColor = NSColor(red: 0.5, green: 0.5, blue: 0.5, alpha: 1.0)
-        if let commentPattern = try? NSRegularExpression(pattern: "<!--[\\s\\S]*?-->", options: []) {
+        do {
+            let commentPattern = try NSRegularExpression(pattern: "<!--[\\s\\S]*?-->", options: [])
             commentPattern.enumerateMatches(in: source, options: [], range: fullRange) { match, _, _ in
                 if let range = match?.range {
                     attributedString.addAttribute(.foregroundColor, value: commentColor, range: range)
                 }
             }
+        } catch {
+            print("[Barc] Error creating comment regex pattern: \(error.localizedDescription)")
         }
 
         // Brackets (gray)
         let bracketColor = NSColor(red: 0.6, green: 0.6, blue: 0.6, alpha: 1.0)
-        if let bracketPattern = try? NSRegularExpression(pattern: "[<>]", options: []) {
+        do {
+            let bracketPattern = try NSRegularExpression(pattern: "[<>]", options: [])
             bracketPattern.enumerateMatches(in: source, options: [], range: fullRange) { match, _, _ in
                 if let range = match?.range {
                     attributedString.addAttribute(.foregroundColor, value: bracketColor, range: range)
                 }
             }
+        } catch {
+            print("[Barc] Error creating bracket regex pattern: \(error.localizedDescription)")
         }
 
         return attributedString
@@ -369,7 +388,12 @@ struct WebView: NSViewRepresentable {
         } else {
             // Tab has no URL, load about:blank if WebView has something else loaded
             if let currentURL = webView.url, currentURL.absoluteString != "about:blank" {
-                webView.load(URLRequest(url: URL(string: "about:blank")!))
+                // about:blank is a well-known URL that is always valid
+                guard let blankURL = URL(string: "about:blank") else {
+                    print("[Barc] Failed to create about:blank URL (should never happen)")
+                    return
+                }
+                webView.load(URLRequest(url: blankURL))
             }
         }
     }
@@ -2166,7 +2190,7 @@ struct WebView: NSViewRepresentable {
                let body = message.body as? [String: Any],
                let action = body["action"] as? String {
                 if action == "deactivated" {
-                    DispatchQueue.main.async { [weak self] in
+                    Task { @MainActor [weak self] in
                         self?.browserState?.isElementPickerActive = false
                     }
                 }
@@ -2180,7 +2204,7 @@ struct WebView: NSViewRepresentable {
                 if action == "videoStatusUpdate" {
                     let hasVideo = body["hasVideo"] as? Bool ?? false
 
-                    DispatchQueue.main.async { [weak self] in
+                    Task { @MainActor [weak self] in
                         self?.tab.hasDownloadableVideo = hasVideo
                     }
                 }
@@ -2190,32 +2214,32 @@ struct WebView: NSViewRepresentable {
         func setupObservers(for webView: WKWebView) {
             observations = [
                 webView.observe(\.title) { [weak self] webView, _ in
-                    DispatchQueue.main.async {
+                    Task { @MainActor [weak self] in
                         self?.tab.title = webView.title ?? "New Tab"
                     }
                 },
                 webView.observe(\.url) { [weak self] webView, _ in
-                    DispatchQueue.main.async {
+                    Task { @MainActor [weak self] in
                         self?.tab.url = webView.url
                     }
                 },
                 webView.observe(\.isLoading) { [weak self] webView, _ in
-                    DispatchQueue.main.async {
+                    Task { @MainActor [weak self] in
                         self?.tab.isLoading = webView.isLoading
                     }
                 },
                 webView.observe(\.canGoBack) { [weak self] webView, _ in
-                    DispatchQueue.main.async {
+                    Task { @MainActor [weak self] in
                         self?.tab.canGoBack = webView.canGoBack
                     }
                 },
                 webView.observe(\.canGoForward) { [weak self] webView, _ in
-                    DispatchQueue.main.async {
+                    Task { @MainActor [weak self] in
                         self?.tab.canGoForward = webView.canGoForward
                     }
                 },
                 webView.observe(\.estimatedProgress) { [weak self] webView, _ in
-                    DispatchQueue.main.async {
+                    Task { @MainActor [weak self] in
                         self?.tab.estimatedProgress = webView.estimatedProgress
                     }
                 }

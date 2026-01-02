@@ -44,7 +44,11 @@ final class BrowserState: ObservableObject {
             // Fallback to default homepage if settings URL is invalid
             guard let defaultURL = URL(string: "https://kagi.com") else {
                 // Last resort: about:blank is guaranteed to be valid
-                return URL(string: "about:blank")!
+                // This force unwrap is safe as "about:blank" is a well-known URL that always parses correctly
+                guard let blankURL = URL(string: "about:blank") else {
+                    fatalError("Failed to create about:blank URL - this should never happen")
+                }
+                return blankURL
             }
             return defaultURL
         }

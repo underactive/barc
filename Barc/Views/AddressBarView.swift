@@ -2,7 +2,7 @@ import SwiftUI
 
 struct AddressBarView: View {
     @EnvironmentObject var browserState: BrowserState
-    @ObservedObject private var privacySettings = PrivacySettings.shared
+    @EnvironmentObject private var privacySettings: PrivacySettings
     @StateObject private var networkMonitor = NetworkActivityMonitor.shared
     @StateObject private var blockedMonitor = BlockedRequestsMonitor.shared
     @ObservedObject private var soundManager = NetworkSoundManager.shared
@@ -526,6 +526,7 @@ struct NetscapeThrobberView: View {
     @State private var meteorOffset: CGFloat = -0.3
     @State private var meteor2Offset: CGFloat = -0.5
     @State private var meteor3Offset: CGFloat = -0.7
+    @State private var cometOffset: CGFloat = -0.4
     @State private var starTwinkle: [Bool] = Array(repeating: false, count: 15)
     @State private var isAnimating: Bool = false
 
@@ -606,6 +607,18 @@ struct NetscapeThrobberView: View {
                 )
                 .shadow(color: Color.cyan.opacity(0.5), radius: 2, x: 0, y: 0)
                 .shadow(color: Color.black, radius: 1, x: 1, y: 1)
+
+            // Large comet on top of the B (only visible when loading)
+            if isLoading {
+                GeometryReader { geo in
+                    CometView()
+                        .frame(width: 24 * scale, height: 6 * scale)
+                        .position(
+                            x: geo.size.width * cometOffset,
+                            y: geo.size.height * (0.4 + cometOffset * 0.3)
+                        )
+                }
+            }
         }
         .frame(width: 28 * scale, height: 28 * scale)
         .clipShape(RoundedRectangle(cornerRadius: 4 * scale))
@@ -638,11 +651,13 @@ struct NetscapeThrobberView: View {
         meteorOffset = -0.3
         meteor2Offset = -0.5
         meteor3Offset = -0.7
+        cometOffset = -0.4
 
         // Animate meteors continuously
         animateMeteor1()
         animateMeteor2()
         animateMeteor3()
+        animateComet()
     }
 
     private func animateMeteor1() {
@@ -677,6 +692,18 @@ struct NetscapeThrobberView: View {
             if isAnimating {
                 meteor3Offset = -0.3
                 animateMeteor3()
+            }
+        }
+    }
+
+    private func animateComet() {
+        withAnimation(.linear(duration: 1.5)) {
+            cometOffset = 1.4
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [self] in
+            if isAnimating {
+                cometOffset = -0.4
+                animateComet()
             }
         }
     }
@@ -744,6 +771,34 @@ struct MeteorView: View {
             )
         }
         .rotationEffect(.degrees(35))
+    }
+}
+
+// Large comet view (appears on top of the B)
+struct CometView: View {
+    var body: some View {
+        GeometryReader { geo in
+            Path { path in
+                path.move(to: CGPoint(x: 0, y: geo.size.height / 2))
+                path.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height / 2))
+            }
+            .stroke(
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(0),
+                        Color.white.opacity(0.2),
+                        Color.white.opacity(0.5),
+                        Color.white.opacity(0.9),
+                        Color.white
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                ),
+                style: StrokeStyle(lineWidth: geo.size.height, lineCap: .round)
+            )
+        }
+        .rotationEffect(.degrees(25))
+        .shadow(color: Color.white.opacity(0.6), radius: 2, x: 0, y: 0)
     }
 }
 
