@@ -18,6 +18,71 @@ open ~/Library/Developer/Xcode/DerivedData/Barc-gvqalylbyxzpsfafrimmjydxeokq/Bui
 
 **Note:** The app sandbox is **disabled** (`com.apple.security.app-sandbox = false` in entitlements) because yt-dlp is a PyInstaller binary that cannot run in a sandboxed environment.
 
+## Code Style & Standards
+
+**CRITICAL:** All code changes must follow the Swift and SwiftUI best practices defined in `.cursorrules`. Key requirements:
+
+### Swift Language Standards
+- Prefer `let` over `var` unless mutation is required
+- Use `guard` for early returns and unwrapping optionals
+- Never force unwrap (`!`) unless absolutely certain of non-nil value
+- Use `private` access control by default, escalate only when needed
+- Mark classes as `final` unless subclassing is intended
+- Group code with `// MARK: -` comments
+
+### Memory Management (Critical for This App)
+- Use `[weak self]` in closures that capture `self` to avoid retain cycles
+- Use `@StateObject` for view-owned ObservableObjects
+- Use `@ObservedObject` for externally-owned ObservableObjects (like singletons)
+- Use `@EnvironmentObject` for shared state across view hierarchy
+- **Never create ObservableObjects in view body** - use `@StateObject` instead
+
+### SwiftUI Patterns
+- Keep view bodies pure - no side effects
+- Perform side effects in `.onAppear`, `.onChange`, or `.task`
+- Break down large views into smaller, reusable components
+- Extract view modifiers into reusable extensions
+- Use `LazyVStack`/`LazyHStack` for large lists
+
+### Property Organization in Views
+Follow this order consistently:
+```swift
+struct MyView: View {
+    // 1. Environment objects
+    @EnvironmentObject var browserState: BrowserState
+
+    // 2. State objects (owned by view)
+    @StateObject private var monitor = NetworkActivityMonitor.shared
+
+    // 3. Observed objects (externally owned)
+    @ObservedObject private var settings = PrivacySettings.shared
+
+    // 4. State properties
+    @State private var isExpanded = false
+
+    // 5. Regular properties
+    let title: String
+
+    // 6. Body
+    var body: some View { ... }
+
+    // 7. Computed properties
+    private var subtitle: String { ... }
+
+    // 8. Methods
+    private func handleTap() { ... }
+}
+```
+
+### Common Pitfalls to Avoid
+- Don't update UI from background threads - use `@MainActor` or `DispatchQueue.main.async`
+- Don't perform heavy work on main thread - use `Task` for async work
+- Don't ignore errors - handle them appropriately with `do-catch` or `Result`
+- Don't create retain cycles - use `weak` or `unowned` references in closures
+- Don't create views conditionally without proper `id()` for stable identity
+
+**See `.cursorrules` for the complete Swift/SwiftUI style guide.**
+
 ## Architecture Overview
 
 ### State Management Pattern
