@@ -208,9 +208,13 @@ struct AddressBarView: View {
 
             // Netscape-style throbber
             if privacySettings.throbberSize.isEnabled {
-                let isPageLoading = (browserState.selectedTab?.isLoading ?? false) || (browserState.selectedTab?.isRendering ?? false)
+                let isRendering = browserState.selectedTab?.isRendering ?? false
                 let hasNetworkActivity = browserState.selectedTabId.map { networkMonitor.transmittingTabIds.contains($0) || networkMonitor.receivingTabIds.contains($0) } ?? false
-                NetscapeThrobberView(isLoading: isPageLoading || hasNetworkActivity, scale: privacySettings.throbberSize.scale)
+                NetscapeThrobberView(
+                    hasNetworkActivity: hasNetworkActivity,
+                    isRendering: isRendering,
+                    scale: privacySettings.throbberSize.scale
+                )
             }
         }
         .padding(.horizontal, 16)
@@ -509,7 +513,13 @@ struct NetworkIndicatorsMenu: View {
 // MARK: - Netscape-style Throbber
 
 struct NetscapeThrobberView: View {
-    let isLoading: Bool
+    let hasNetworkActivity: Bool
+    let isRendering: Bool
+    
+    // Computed property: animation should be active if any trigger is active
+    private var shouldBeActive: Bool {
+        hasNetworkActivity || isRendering
+    }
 
     // Star positions (x, y as percentages of container)
     private let starPositions: [(x: CGFloat, y: CGFloat, size: CGFloat)] = [
@@ -529,6 +539,12 @@ struct NetscapeThrobberView: View {
     @State private var cometOffset: CGFloat = -0.4
     @State private var starTwinkle: [Bool] = Array(repeating: false, count: 15)
     @State private var isAnimating: Bool = false
+    @State private var animationStartTime: Date?
+    @State private var pendingStopTask: DispatchWorkItem?
+    @State private var isTwinkling: Bool = false
+    
+    // Minimum animation duration (one full loop of longest animation)
+    private let minAnimationDuration: TimeInterval = 1.5
 
     var body: some View {
         ZStack {
@@ -560,8 +576,8 @@ struct NetscapeThrobberView: View {
                 }
             }
 
-            // Meteors (only visible when loading)
-            if isLoading {
+            // Meteors (only visible when animating)
+            if isAnimating {
                 GeometryReader { geo in
                     // Main meteor
                     MeteorView()
@@ -608,8 +624,8 @@ struct NetscapeThrobberView: View {
                 .shadow(color: Color.cyan.opacity(0.5), radius: 2, x: 0, y: 0)
                 .shadow(color: Color.black, radius: 1, x: 1, y: 1)
 
-            // Large comet on top of the B (only visible when loading)
-            if isLoading {
+            // Large comet on top of the B (only visible when animating)
+            if isAnimating {
                 GeometryReader { geo in
                     CometView()
                         .frame(width: 24 * scale, height: 6 * scale)
@@ -626,24 +642,19 @@ struct NetscapeThrobberView: View {
             RoundedRectangle(cornerRadius: 4 * scale)
                 .strokeBorder(Color.gray.opacity(0.3), lineWidth: 0.5)
         )
-        .onChange(of: isLoading) { _, newValue in
-            isAnimating = newValue
-            if newValue {
-                startMeteorAnimation()
-                startTwinkleAnimation()
-            } else {
-                stopAnimations()
-            }
+        .onChange(of: hasNetworkActivity) { _, _ in
+            handleTriggerChange(shouldBeActive: shouldBeActive)
+        }
+        .onChange(of: isRendering) { _, _ in
+            handleTriggerChange(shouldBeActive: shouldBeActive)
         }
         .onAppear {
-            // Only start animations if already loading when view appears
-            if isLoading {
-                isAnimating = true
-                startMeteorAnimation()
-                startTwinkleAnimation()
+            // Start animations if triggers are already active when view appears
+            if shouldBeActive {
+                handleTriggerChange(shouldBeActive: true)
             }
         }
-        .help(isLoading ? "Loading..." : "Click to reload")
+        .help(shouldBeActive ? "Loading..." : "Click to reload")
     }
 
     private func startMeteorAnimation() {
@@ -709,12 +720,17 @@ struct NetscapeThrobberView: View {
     }
 
     private func startTwinkleAnimation() {
-        // Randomly twinkle stars
+        // Only start if not already twinkling
+        guard !isTwinkling else { return }
+        isTwinkling = true
         twinkleRandomStars()
     }
 
     private func twinkleRandomStars() {
-        guard isAnimating else { return }
+        guard isAnimating else {
+            isTwinkling = false
+            return
+        }
 
         // Pick random stars to twinkle
         for i in 0..<starPositions.count {
@@ -736,9 +752,66 @@ struct NetscapeThrobberView: View {
         }
     }
 
+    private func handleTriggerChange(shouldBeActive: Bool) {
+        if shouldBeActive {
+            // Cancel any pending stop
+            pendingStopTask?.cancel()
+            pendingStopTask = nil
+            
+            if !isAnimating {
+                // Not already animating - start animations
+                animationStartTime = Date()
+                isAnimating = true
+                startMeteorAnimation()
+                startTwinkleAnimation()
+            }
+            // If already animating, do nothing - animation continues
+        } else {
+            // Triggers are inactive - schedule stop after minimum duration
+            if isAnimating {
+                scheduleStopIfNeeded()
+            }
+        }
+    }
+    
+    private func scheduleStopIfNeeded() {
+        // Cancel any existing pending stop
+        pendingStopTask?.cancel()
+        
+        guard let startTime = animationStartTime else {
+            // No start time recorded, stop immediately
+            stopAnimations()
+            return
+        }
+        
+        let elapsed = Date().timeIntervalSince(startTime)
+        if elapsed >= minAnimationDuration {
+            // Already completed at least one loop, stop immediately
+            stopAnimations()
+        } else {
+            // Wait for at least one full loop to complete
+            let remainingTime = minAnimationDuration - elapsed
+            let workItem = DispatchWorkItem { [self] in
+                // Check if triggers are still inactive before stopping
+                if !shouldBeActive {
+                    stopAnimations()
+                }
+            }
+            pendingStopTask = workItem
+            DispatchQueue.main.asyncAfter(deadline: .now() + remainingTime, execute: workItem)
+        }
+    }
+    
     private func stopAnimations() {
+        // Cancel any pending stop task
+        pendingStopTask?.cancel()
+        pendingStopTask = nil
+        
         // Stop animation loops
         isAnimating = false
+        isTwinkling = false
+        animationStartTime = nil
+        
         // Reset to default state
         withAnimation(.easeOut(duration: 0.3)) {
             for i in 0..<starTwinkle.count {
