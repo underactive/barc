@@ -31,6 +31,8 @@ struct PrivacySettingsView: View {
     @State private var showingClearDataConfirmation = false
     @State private var showingFingerprintWarning = false
     @State private var dontShowAgainChecked = false
+    @State private var showingHTTPSInfo = false
+    @State private var showingReferrerInfo = false
 
     // MARK: - Computed Properties (Performance Optimization)
     
@@ -82,53 +84,17 @@ struct PrivacySettingsView: View {
     /// Fingerprinting protection section view (extracted for performance)
     private var fingerprintingSection: some View {
         Section {
-            FingerprintToggleRow(
-                title: "Canvas Fingerprint Protection",
-                description: "Add subtle noise to canvas data to prevent unique browser identification.",
-                systemImage: "hand.raised.fingers.spread",
-                isOn: $settings.canvasFingerprintProtection,
-                showWarning: showFingerprintWarningIfNeeded
-            )
+            CanvasFingerprintRow(settings: settings, showWarning: showFingerprintWarningIfNeeded)
 
-            FingerprintToggleRow(
-                title: "WebGL Fingerprint Protection",
-                description: "Mask WebGL renderer and vendor info used for browser identification.",
-                systemImage: "cube.transparent",
-                isOn: $settings.webGLFingerprintProtection,
-                showWarning: showFingerprintWarningIfNeeded
-            )
+            WebGLFingerprintRow(settings: settings, showWarning: showFingerprintWarningIfNeeded)
 
-            FingerprintToggleRow(
-                title: "WebRTC IP Leak Protection",
-                description: "Prevent websites from discovering your real IP address through WebRTC.",
-                systemImage: "network.slash",
-                isOn: $settings.webRTCProtection,
-                showWarning: showFingerprintWarningIfNeeded
-            )
+            WebRTCProtectionRow(settings: settings, showWarning: showFingerprintWarningIfNeeded)
 
-            FingerprintToggleRow(
-                title: "Hardware Fingerprint Resistance",
-                description: "Spoof hardware info (CPU cores, memory) to reduce fingerprinting accuracy.",
-                systemImage: "cpu",
-                isOn: $settings.hardwareFingerprintResistance,
-                showWarning: showFingerprintWarningIfNeeded
-            )
+            HardwareFingerprintRow(settings: settings, showWarning: showFingerprintWarningIfNeeded)
 
-            FingerprintToggleRow(
-                title: "Font Fingerprint Protection",
-                description: "Limit detectable fonts to a common subset to prevent identification.",
-                systemImage: "textformat",
-                isOn: $settings.fontFingerprintProtection,
-                showWarning: showFingerprintWarningIfNeeded
-            )
+            FontFingerprintRow(settings: settings, showWarning: showFingerprintWarningIfNeeded)
 
-            FingerprintToggleRow(
-                title: "AudioContext Fingerprint Protection",
-                description: "Spoof audio processing to prevent audio-based fingerprinting.",
-                systemImage: "waveform",
-                isOn: $settings.audioContextFingerprintProtection,
-                showWarning: showFingerprintWarningIfNeeded
-            )
+            AudioContextFingerprintRow(settings: settings, showWarning: showFingerprintWarningIfNeeded)
 
             BatteryAPIBlockingRow(settings: settings, showWarning: showFingerprintWarningIfNeeded)
 
@@ -148,35 +114,15 @@ struct PrivacySettingsView: View {
         Section {
             JavaScriptToggleRow(settings: settings)
 
-            PrivacyToggleRow(
-                title: "Block Media Autoplay",
-                description: "Prevent videos and audio from playing automatically until you interact.",
-                systemImage: "play.slash",
-                isOn: $settings.blockMediaAutoplay
-            )
+            MediaAutoplayRow(settings: settings)
 
             TrackerBlockingRow(settings: settings)
 
-            PrivacyToggleRow(
-                title: "Tracking Pixel Blocking",
-                description: "Block invisible 1x1 pixel images used for email and web tracking.",
-                systemImage: "eye.slash.circle",
-                isOn: $settings.trackingPixelBlocking
-            )
+            TrackingPixelRow(settings: settings)
 
-            PrivacyToggleRow(
-                title: "Popup Blocking",
-                description: "Open popup windows in the current tab instead of new windows.",
-                systemImage: "rectangle.badge.xmark",
-                isOn: $settings.popupBlocking
-            )
+            PopupBlockingRow(settings: settings)
 
-            PrivacyToggleRow(
-                title: "Third-Party Cookie Blocking",
-                description: "Block cookies from domains other than the site you're visiting.",
-                systemImage: "circle.slash",
-                isOn: $settings.thirdPartyCookieBlocking
-            )
+            ThirdPartyCookieRow(settings: settings)
 
             CrossSiteTrackingRow(settings: settings)
 
@@ -210,12 +156,20 @@ struct PrivacySettingsView: View {
                         .frame(width: 24)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("HTTPS-Only Mode")
-                            .font(.system(size: 13, weight: .medium))
+                        HStack(spacing: 4) {
+                            Text("HTTPS-Only Mode")
+                                .font(.system(size: 13, weight: .medium))
+                            Button(action: { showingHTTPSInfo = true }) {
+                                Image(systemName: "info.circle")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.accentColor)
+                            }
+                            .buttonStyle(.plain)
+                            .help("More info")
+                        }
                         Text("Control how the browser handles insecure HTTP connections.")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
-                            .lineLimit(2)
                     }
 
                     Spacer()
@@ -235,6 +189,62 @@ struct PrivacySettingsView: View {
                     .padding(.leading, 36)
             }
             .padding(.vertical, 4)
+            .popover(isPresented: $showingHTTPSInfo, arrowEdge: .trailing) {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "lock.shield.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(.accentColor)
+                        Text("How It Works")
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+
+                    Text("HTTPS-Only Mode automatically upgrades insecure HTTP connections to secure HTTPS when possible. This protects you from man-in-the-middle attacks and ensures encrypted communication with websites.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Divider()
+
+                    HStack {
+                        Image(systemName: "arrow.left.arrow.right")
+                            .font(.system(size: 14))
+                            .foregroundColor(.accentColor)
+                        Text("Modes")
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        InfoRow(
+                            icon: "chevron.right",
+                            text: "Off: Allow HTTP connections"
+                        )
+                        InfoRow(
+                            icon: "chevron.right",
+                            text: "Private Windows: Upgrade HTTP in private windows only"
+                        )
+                        InfoRow(
+                            icon: "chevron.right",
+                            text: "All Windows: Upgrade HTTP in all windows"
+                        )
+                    }
+
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Upgrade Behavior")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.secondary)
+
+                        Text("When a site doesn't support HTTPS, you'll see a warning page. You can choose to continue to the HTTP site if needed, but it's not recommended for security.")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(12)
+                .frame(width: 300)
+            }
 
             // Referrer Policy
             VStack(alignment: .leading, spacing: 8) {
@@ -245,12 +255,20 @@ struct PrivacySettingsView: View {
                         .frame(width: 24)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Referrer Policy")
-                            .font(.system(size: 13, weight: .medium))
+                        HStack(spacing: 4) {
+                            Text("Referrer Policy")
+                                .font(.system(size: 13, weight: .medium))
+                            Button(action: { showingReferrerInfo = true }) {
+                                Image(systemName: "info.circle")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.accentColor)
+                            }
+                            .buttonStyle(.plain)
+                            .help("More info")
+                        }
                         Text("Control what information is sent about your previous page when navigating.")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
-                            .lineLimit(2)
                     }
 
                     Spacer()
@@ -270,6 +288,64 @@ struct PrivacySettingsView: View {
                     .padding(.leading, 36)
             }
             .padding(.vertical, 4)
+            .popover(isPresented: $showingReferrerInfo, arrowEdge: .trailing) {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "arrow.left.arrow.right")
+                            .font(.system(size: 14))
+                            .foregroundColor(.accentColor)
+                        Text("How It Works")
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+
+                    Text("The referrer header tells websites which page you came from. This can reveal your browsing history and be used for tracking. The referrer policy controls how much of this information is sent.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Divider()
+
+                    HStack {
+                        Image(systemName: "arrow.left.arrow.right")
+                            .font(.system(size: 14))
+                            .foregroundColor(.accentColor)
+                        Text("Policy Options")
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        InfoRow(
+                            icon: "chevron.right",
+                            text: "Default: Send full referrer (same-origin only)"
+                        )
+                        InfoRow(
+                            icon: "chevron.right",
+                            text: "No Referrer: Never send referrer"
+                        )
+                        InfoRow(
+                            icon: "chevron.right",
+                            text: "Same Origin: Send referrer only for same-origin requests"
+                        )
+                        InfoRow(
+                            icon: "chevron.right",
+                            text: "Strict Origin: Send origin only, not full URL"
+                        )
+                        InfoRow(
+                            icon: "chevron.right",
+                            text: "Strict Origin When Cross-Origin: Full referrer for same-origin, origin only for cross-origin"
+                        )
+                    }
+
+                    Divider()
+
+                    Text("Note: Some websites may break if they rely on referrer information for functionality (e.g., image hotlinking protection).")
+                        .font(.system(size: 10))
+                        .foregroundColor(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(12)
+                .frame(width: 320)
+            }
         } header: {
             Label("Network Privacy", systemImage: "network.badge.shield.half.filled")
                 .font(.headline)
@@ -279,12 +355,7 @@ struct PrivacySettingsView: View {
     /// Storage section view (extracted for performance)
     private var storageSection: some View {
         Section {
-            PrivacyToggleRow(
-                title: "Non-Persistent Storage",
-                description: "Clear non-whitelisted cookies and storage when Barc quits.",
-                systemImage: "clock.badge.xmark",
-                isOn: $settings.nonPersistentStorage
-            )
+            NonPersistentStorageRow(settings: settings)
 
             // Storage Whitelist
             StorageWhitelistView(settings: settings, newDomain: $newWhitelistDomain)
@@ -607,19 +678,20 @@ struct CrossSiteTrackingRow: View {
                     .frame(width: 24)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Cross-Site Tracking Prevention")
-                        .font(.system(size: 13, weight: .medium))
-                    HStack(spacing: 0) {
-                        Text("Block tracking across websites (ITP-style). ")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                        Button("More info") {
-                            showingInfo = true
+                    HStack(spacing: 4) {
+                        Text("Cross-Site Tracking Prevention")
+                            .font(.system(size: 13, weight: .medium))
+                        Button(action: { showingInfo = true }) {
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 11))
+                                .foregroundColor(.accentColor)
                         }
-                        .font(.system(size: 11))
                         .buttonStyle(.plain)
-                        .foregroundColor(.accentColor)
+                        .help("More info")
                     }
+                    Text("Block tracking across websites (ITP-style).")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
                 }
             }
         }
@@ -711,19 +783,20 @@ struct SocialWidgetBlockingRow: View {
                     .frame(width: 24)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Social Widget Blocking")
-                        .font(.system(size: 13, weight: .medium))
-                    HStack(spacing: 0) {
-                        Text("Block Like buttons, embeds, and share widgets. ")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                        Button("More info") {
-                            showingInfo = true
+                    HStack(spacing: 4) {
+                        Text("Social Widget Blocking")
+                            .font(.system(size: 13, weight: .medium))
+                        Button(action: { showingInfo = true }) {
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 11))
+                                .foregroundColor(.accentColor)
                         }
-                        .font(.system(size: 11))
                         .buttonStyle(.plain)
-                        .foregroundColor(.accentColor)
+                        .help("More info")
                     }
+                    Text("Block Like buttons, embeds, and share widgets.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
                 }
             }
         }
@@ -797,19 +870,20 @@ struct CookieBannerRow: View {
                     .frame(width: 24)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Cookie Banner Auto-Reject")
-                        .font(.system(size: 13, weight: .medium))
-                    HStack(spacing: 0) {
-                        Text("Automatically dismiss cookie consent popups. ")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                        Button("More info") {
-                            showingInfo = true
+                    HStack(spacing: 4) {
+                        Text("Cookie Banner Auto-Reject")
+                            .font(.system(size: 13, weight: .medium))
+                        Button(action: { showingInfo = true }) {
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 11))
+                                .foregroundColor(.accentColor)
                         }
-                        .font(.system(size: 11))
                         .buttonStyle(.plain)
-                        .foregroundColor(.accentColor)
+                        .help("More info")
                     }
+                    Text("Automatically dismiss cookie consent popups.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
                 }
             }
         }
@@ -903,18 +977,17 @@ struct JavaScriptToggleRow: View {
                                 RoundedRectangle(cornerRadius: 3)
                                     .fill(Color.red)
                             )
-                    }
-                    HStack(spacing: 0) {
-                        Text("Block all JavaScript execution. ")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                        Button("More info") {
-                            showingInfo = true
+                        Button(action: { showingInfo = true }) {
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 11))
+                                .foregroundColor(.accentColor)
                         }
-                        .font(.system(size: 11))
                         .buttonStyle(.plain)
-                        .foregroundColor(.accentColor)
+                        .help("More info")
                     }
+                    Text("Block all JavaScript execution.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
                 }
             }
         }
@@ -1031,19 +1104,20 @@ struct ClipboardBlockingRow: View {
                     .frame(width: 24)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Clipboard Access Blocking")
-                        .font(.system(size: 13, weight: .medium))
-                    HStack(spacing: 0) {
-                        Text("Prevent sites from silently reading your clipboard. ")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                        Button("More info") {
-                            showingInfo = true
+                    HStack(spacing: 4) {
+                        Text("Clipboard Access Blocking")
+                            .font(.system(size: 13, weight: .medium))
+                        Button(action: { showingInfo = true }) {
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 11))
+                                .foregroundColor(.accentColor)
                         }
-                        .font(.system(size: 11))
                         .buttonStyle(.plain)
-                        .foregroundColor(.accentColor)
+                        .help("More info")
                     }
+                    Text("Prevent sites from silently reading your clipboard.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
                 }
             }
         }
@@ -1114,19 +1188,20 @@ struct CryptoMinerBlockingRow: View {
                     .frame(width: 24)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Crypto Miner Blocking")
-                        .font(.system(size: 13, weight: .medium))
-                    HStack(spacing: 0) {
-                        Text("Block cryptocurrency mining scripts. ")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                        Button("More info") {
-                            showingInfo = true
+                    HStack(spacing: 4) {
+                        Text("Crypto Miner Blocking")
+                            .font(.system(size: 13, weight: .medium))
+                        Button(action: { showingInfo = true }) {
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 11))
+                                .foregroundColor(.accentColor)
                         }
-                        .font(.system(size: 11))
                         .buttonStyle(.plain)
-                        .foregroundColor(.accentColor)
+                        .help("More info")
                     }
+                    Text("Block cryptocurrency mining scripts.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
                 }
             }
         }
@@ -1207,19 +1282,20 @@ struct YouTubeShortsBlockingRow: View {
                     .frame(width: 24)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Block YouTube Shorts")
-                        .font(.system(size: 13, weight: .medium))
-                    HStack(spacing: 0) {
-                        Text("Remove Shorts from YouTube homepage and navigation sidebar. ")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                        Button("More info") {
-                            showingInfo = true
+                    HStack(spacing: 4) {
+                        Text("Block YouTube Shorts")
+                            .font(.system(size: 13, weight: .medium))
+                        Button(action: { showingInfo = true }) {
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 11))
+                                .foregroundColor(.accentColor)
                         }
-                        .font(.system(size: 11))
                         .buttonStyle(.plain)
-                        .foregroundColor(.accentColor)
+                        .help("More info")
                     }
+                    Text("Remove Shorts from YouTube homepage and navigation sidebar.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
                 }
             }
         }
@@ -1307,19 +1383,20 @@ struct BatteryAPIBlockingRow: View {
                     .frame(width: 24)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Battery API Blocking")
-                        .font(.system(size: 13, weight: .medium))
-                    HStack(spacing: 0) {
-                        Text("Block battery status API (fingerprinting vector). ")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                        Button("More info") {
-                            showingInfo = true
+                    HStack(spacing: 4) {
+                        Text("Battery API Blocking")
+                            .font(.system(size: 13, weight: .medium))
+                        Button(action: { showingInfo = true }) {
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 11))
+                                .foregroundColor(.accentColor)
                         }
-                        .font(.system(size: 11))
                         .buttonStyle(.plain)
-                        .foregroundColor(.accentColor)
+                        .help("More info")
                     }
+                    Text("Block battery status API (fingerprinting vector).")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
                 }
             }
         }
@@ -1396,19 +1473,20 @@ struct LanguageSpoofingRow: View {
                         .frame(width: 24)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Language Spoofing")
-                            .font(.system(size: 13, weight: .medium))
-                        HStack(spacing: 0) {
-                            Text("Report a common language to reduce fingerprinting. ")
-                                .font(.system(size: 11))
-                                .foregroundColor(.secondary)
-                            Button("More info") {
-                                showingInfo = true
+                        HStack(spacing: 4) {
+                            Text("Language Spoofing")
+                                .font(.system(size: 13, weight: .medium))
+                            Button(action: { showingInfo = true }) {
+                                Image(systemName: "info.circle")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.accentColor)
                             }
-                            .font(.system(size: 11))
                             .buttonStyle(.plain)
-                            .foregroundColor(.accentColor)
+                            .help("More info")
                         }
+                        Text("Report a common language to reduce fingerprinting.")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
                     }
                 }
             }
@@ -1526,19 +1604,20 @@ struct TimezoneSpoofingRow: View {
                         .frame(width: 24)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Timezone Spoofing")
-                            .font(.system(size: 13, weight: .medium))
-                        HStack(spacing: 0) {
-                            Text("Report a common timezone to reduce fingerprinting. ")
-                                .font(.system(size: 11))
-                                .foregroundColor(.secondary)
-                            Button("More info") {
-                                showingInfo = true
+                        HStack(spacing: 4) {
+                            Text("Timezone Spoofing")
+                                .font(.system(size: 13, weight: .medium))
+                            Button(action: { showingInfo = true }) {
+                                Image(systemName: "info.circle")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.accentColor)
                             }
-                            .font(.system(size: 11))
                             .buttonStyle(.plain)
-                            .foregroundColor(.accentColor)
+                            .help("More info")
                         }
+                        Text("Report a common timezone to reduce fingerprinting.")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
                     }
                 }
             }
@@ -1656,19 +1735,20 @@ struct ScreenResolutionSpoofingRow: View {
                         .frame(width: 24)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Screen Resolution Spoofing")
-                            .font(.system(size: 13, weight: .medium))
-                        HStack(spacing: 0) {
-                            Text("Report common screen dimensions. ")
-                                .font(.system(size: 11))
-                                .foregroundColor(.secondary)
-                            Button("More info") {
-                                showingInfo = true
+                        HStack(spacing: 4) {
+                            Text("Screen Resolution Spoofing")
+                                .font(.system(size: 13, weight: .medium))
+                            Button(action: { showingInfo = true }) {
+                                Image(systemName: "info.circle")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.accentColor)
                             }
-                            .font(.system(size: 11))
                             .buttonStyle(.plain)
-                            .foregroundColor(.accentColor)
+                            .help("More info")
                         }
+                        Text("Report common screen dimensions.")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
                     }
                 }
             }
@@ -1757,6 +1837,1048 @@ struct ScreenResolutionSpoofingRow: View {
             }
             .padding(12)
             .frame(width: 300)
+        }
+    }
+}
+
+// MARK: - Fingerprinting Protection Rows
+
+struct CanvasFingerprintRow: View {
+    @ObservedObject var settings: PrivacySettings
+    var showWarning: () -> Void
+    @State private var showingInfo = false
+
+    var body: some View {
+        Toggle(isOn: Binding(
+            get: { settings.canvasFingerprintProtection },
+            set: { newValue in
+                settings.canvasFingerprintProtection = newValue
+                showWarning()
+            }
+        )) {
+            HStack(spacing: 12) {
+                Image(systemName: "hand.raised.fingers.spread")
+                    .font(.system(size: 16))
+                    .foregroundColor(settings.canvasFingerprintProtection ? .accentColor : .secondary)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text("Canvas Fingerprint Protection")
+                            .font(.system(size: 13, weight: .medium))
+                        Button(action: { showingInfo = true }) {
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 11))
+                                .foregroundColor(.accentColor)
+                        }
+                        .buttonStyle(.plain)
+                        .help("More info")
+                    }
+                    Text("Add subtle noise to canvas data to prevent unique browser identification.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .toggleStyle(.switch)
+        .padding(.vertical, 4)
+        .popover(isPresented: $showingInfo, arrowEdge: .trailing) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "hand.raised.fingers.spread.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("How It Works")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                Text("Canvas fingerprinting extracts unique rendering characteristics from HTML5 canvas elements. Websites can identify you by the subtle differences in how your browser renders graphics. This feature adds imperceptible noise to canvas output to prevent unique identification.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Divider()
+
+                HStack {
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("What's Spoofed")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "canvas.toDataURL() output"
+                    )
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "canvas.getImageData() pixel data"
+                    )
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "Canvas rendering patterns"
+                    )
+                }
+            }
+            .padding(12)
+            .frame(width: 300)
+        }
+    }
+}
+
+struct WebGLFingerprintRow: View {
+    @ObservedObject var settings: PrivacySettings
+    var showWarning: () -> Void
+    @State private var showingInfo = false
+
+    var body: some View {
+        Toggle(isOn: Binding(
+            get: { settings.webGLFingerprintProtection },
+            set: { newValue in
+                settings.webGLFingerprintProtection = newValue
+                showWarning()
+            }
+        )) {
+            HStack(spacing: 12) {
+                Image(systemName: "cube.transparent")
+                    .font(.system(size: 16))
+                    .foregroundColor(settings.webGLFingerprintProtection ? .accentColor : .secondary)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text("WebGL Fingerprint Protection")
+                            .font(.system(size: 13, weight: .medium))
+                        Button(action: { showingInfo = true }) {
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 11))
+                                .foregroundColor(.accentColor)
+                        }
+                        .buttonStyle(.plain)
+                        .help("More info")
+                    }
+                    Text("Mask WebGL renderer and vendor info used for browser identification.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .toggleStyle(.switch)
+        .padding(.vertical, 4)
+        .popover(isPresented: $showingInfo, arrowEdge: .trailing) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "cube.transparent.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("How It Works")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                Text("WebGL exposes information about your graphics card and driver, which can be used to create a unique fingerprint. This feature masks the renderer, vendor, and version information to prevent identification.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Divider()
+
+                HStack {
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("What's Masked")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "getParameter(UNMASKED_VENDOR_WEBGL)"
+                    )
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "getParameter(UNMASKED_RENDERER_WEBGL)"
+                    )
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "getExtension() vendor strings"
+                    )
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "getShaderPrecisionFormat() values"
+                    )
+                }
+            }
+            .padding(12)
+            .frame(width: 300)
+        }
+    }
+}
+
+struct WebRTCProtectionRow: View {
+    @ObservedObject var settings: PrivacySettings
+    var showWarning: () -> Void
+    @State private var showingInfo = false
+
+    var body: some View {
+        Toggle(isOn: Binding(
+            get: { settings.webRTCProtection },
+            set: { newValue in
+                settings.webRTCProtection = newValue
+                showWarning()
+            }
+        )) {
+            HStack(spacing: 12) {
+                Image(systemName: "network.slash")
+                    .font(.system(size: 16))
+                    .foregroundColor(settings.webRTCProtection ? .accentColor : .secondary)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text("WebRTC IP Leak Protection")
+                            .font(.system(size: 13, weight: .medium))
+                        Button(action: { showingInfo = true }) {
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 11))
+                                .foregroundColor(.accentColor)
+                        }
+                        .buttonStyle(.plain)
+                        .help("More info")
+                    }
+                    Text("Prevent websites from discovering your real IP address through WebRTC.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .toggleStyle(.switch)
+        .padding(.vertical, 4)
+        .popover(isPresented: $showingInfo, arrowEdge: .trailing) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "network.slash.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("How It Works")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                Text("WebRTC can leak your real IP address even when using a VPN or proxy. Websites can use WebRTC's ICE (Interactive Connectivity Establishment) protocol to discover your local and public IP addresses. This feature blocks WebRTC functionality to prevent IP leaks.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Divider()
+
+                HStack {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.red)
+                    Text("What's Blocked")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "RTCPeerConnection API"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "ICE candidate gathering"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Local IP address exposure"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "STUN/TURN server requests"
+                    )
+                }
+
+                Divider()
+
+                Text("Note: This will break websites that require WebRTC for video calls, voice chat, or peer-to-peer connections.")
+                    .font(.system(size: 10))
+                    .foregroundColor(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(12)
+            .frame(width: 320)
+        }
+    }
+}
+
+struct HardwareFingerprintRow: View {
+    @ObservedObject var settings: PrivacySettings
+    var showWarning: () -> Void
+    @State private var showingInfo = false
+
+    var body: some View {
+        Toggle(isOn: Binding(
+            get: { settings.hardwareFingerprintResistance },
+            set: { newValue in
+                settings.hardwareFingerprintResistance = newValue
+                showWarning()
+            }
+        )) {
+            HStack(spacing: 12) {
+                Image(systemName: "cpu")
+                    .font(.system(size: 16))
+                    .foregroundColor(settings.hardwareFingerprintResistance ? .accentColor : .secondary)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text("Hardware Fingerprint Resistance")
+                            .font(.system(size: 13, weight: .medium))
+                        Button(action: { showingInfo = true }) {
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 11))
+                                .foregroundColor(.accentColor)
+                        }
+                        .buttonStyle(.plain)
+                        .help("More info")
+                    }
+                    Text("Spoof hardware info (CPU cores, memory) to reduce fingerprinting accuracy.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .toggleStyle(.switch)
+        .padding(.vertical, 4)
+        .popover(isPresented: $showingInfo, arrowEdge: .trailing) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "cpu.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("How It Works")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                Text("Hardware characteristics like CPU core count and available memory can be used to identify your device. This feature reports common hardware values to make you blend in with more users.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Divider()
+
+                HStack {
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("What's Spoofed")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "navigator.hardwareConcurrency (CPU cores)"
+                    )
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "navigator.deviceMemory (RAM)"
+                    )
+                }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Common Values")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.secondary)
+
+                    Text("Reports common hardware configurations (e.g., 4 CPU cores, 8GB RAM) to match the majority of users.")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(12)
+            .frame(width: 300)
+        }
+    }
+}
+
+struct FontFingerprintRow: View {
+    @ObservedObject var settings: PrivacySettings
+    var showWarning: () -> Void
+    @State private var showingInfo = false
+
+    var body: some View {
+        Toggle(isOn: Binding(
+            get: { settings.fontFingerprintProtection },
+            set: { newValue in
+                settings.fontFingerprintProtection = newValue
+                showWarning()
+            }
+        )) {
+            HStack(spacing: 12) {
+                Image(systemName: "textformat")
+                    .font(.system(size: 16))
+                    .foregroundColor(settings.fontFingerprintProtection ? .accentColor : .secondary)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text("Font Fingerprint Protection")
+                            .font(.system(size: 13, weight: .medium))
+                        Button(action: { showingInfo = true }) {
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 11))
+                                .foregroundColor(.accentColor)
+                        }
+                        .buttonStyle(.plain)
+                        .help("More info")
+                    }
+                    Text("Limit detectable fonts to a common subset to prevent identification.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .toggleStyle(.switch)
+        .padding(.vertical, 4)
+        .popover(isPresented: $showingInfo, arrowEdge: .trailing) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "textformat")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("How It Works")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                Text("Websites can detect which fonts you have installed by measuring text rendering. Your unique font collection can identify you. This feature limits detectable fonts to a common subset that most users have.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Divider()
+
+                HStack {
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("What's Limited")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "document.fonts.check() enumeration"
+                    )
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "Font measurement techniques"
+                    )
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "CSS font detection"
+                    )
+                }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Common Font Subset")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.secondary)
+
+                    Text("Reports only standard system fonts (Arial, Times New Roman, Courier New, etc.) that are available on most systems.")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(12)
+            .frame(width: 300)
+        }
+    }
+}
+
+struct AudioContextFingerprintRow: View {
+    @ObservedObject var settings: PrivacySettings
+    var showWarning: () -> Void
+    @State private var showingInfo = false
+
+    var body: some View {
+        Toggle(isOn: Binding(
+            get: { settings.audioContextFingerprintProtection },
+            set: { newValue in
+                settings.audioContextFingerprintProtection = newValue
+                showWarning()
+            }
+        )) {
+            HStack(spacing: 12) {
+                Image(systemName: "waveform")
+                    .font(.system(size: 16))
+                    .foregroundColor(settings.audioContextFingerprintProtection ? .accentColor : .secondary)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text("AudioContext Fingerprint Protection")
+                            .font(.system(size: 13, weight: .medium))
+                        Button(action: { showingInfo = true }) {
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 11))
+                                .foregroundColor(.accentColor)
+                        }
+                        .buttonStyle(.plain)
+                        .help("More info")
+                    }
+                    Text("Spoof audio processing to prevent audio-based fingerprinting.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .toggleStyle(.switch)
+        .padding(.vertical, 4)
+        .popover(isPresented: $showingInfo, arrowEdge: .trailing) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "waveform.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("How It Works")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                Text("Audio fingerprinting analyzes how your audio hardware processes sound signals. Each device has unique audio processing characteristics that can identify you. This feature adds noise to audio processing to prevent unique identification.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Divider()
+
+                HStack {
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("What's Spoofed")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "AudioContext oscillator output"
+                    )
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "AudioBuffer processing patterns"
+                    )
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "Audio processing timing"
+                    )
+                }
+            }
+            .padding(12)
+            .frame(width: 300)
+        }
+    }
+}
+
+// MARK: - Content Blocking Rows
+
+struct MediaAutoplayRow: View {
+    @ObservedObject var settings: PrivacySettings
+    @State private var showingInfo = false
+
+    var body: some View {
+        Toggle(isOn: $settings.blockMediaAutoplay) {
+            HStack(spacing: 12) {
+                Image(systemName: "play.slash")
+                    .font(.system(size: 16))
+                    .foregroundColor(settings.blockMediaAutoplay ? .accentColor : .secondary)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text("Block Media Autoplay")
+                            .font(.system(size: 13, weight: .medium))
+                        Button(action: { showingInfo = true }) {
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 11))
+                                .foregroundColor(.accentColor)
+                        }
+                        .buttonStyle(.plain)
+                        .help("More info")
+                    }
+                    Text("Prevent videos and audio from playing automatically until you interact.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .toggleStyle(.switch)
+        .padding(.vertical, 4)
+        .popover(isPresented: $showingInfo, arrowEdge: .trailing) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "play.slash.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("How It Works")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                Text("Media autoplay can be annoying, consume bandwidth, and drain battery. This feature prevents videos and audio from playing automatically until you click play or interact with the page.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Divider()
+
+                HStack {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.red)
+                    Text("What's Blocked")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "HTML5 video autoplay"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "HTML5 audio autoplay"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Autoplay with sound"
+                    )
+                }
+
+                Divider()
+
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.green)
+                    Text("What's Allowed")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "checkmark",
+                        text: "Muted autoplay (if supported)"
+                    )
+                    InfoRow(
+                        icon: "checkmark",
+                        text: "User-initiated playback"
+                    )
+                }
+            }
+            .padding(12)
+            .frame(width: 300)
+        }
+    }
+}
+
+struct TrackingPixelRow: View {
+    @ObservedObject var settings: PrivacySettings
+    @State private var showingInfo = false
+
+    var body: some View {
+        Toggle(isOn: $settings.trackingPixelBlocking) {
+            HStack(spacing: 12) {
+                Image(systemName: "eye.slash.circle")
+                    .font(.system(size: 16))
+                    .foregroundColor(settings.trackingPixelBlocking ? .accentColor : .secondary)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text("Tracking Pixel Blocking")
+                            .font(.system(size: 13, weight: .medium))
+                        Button(action: { showingInfo = true }) {
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 11))
+                                .foregroundColor(.accentColor)
+                        }
+                        .buttonStyle(.plain)
+                        .help("More info")
+                    }
+                    Text("Block invisible 1x1 pixel images used for email and web tracking.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .toggleStyle(.switch)
+        .padding(.vertical, 4)
+        .popover(isPresented: $showingInfo, arrowEdge: .trailing) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "eye.slash.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("How It Works")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                Text("Tracking pixels are tiny, invisible images (usually 1x1 pixels) embedded in emails and web pages. When loaded, they notify the sender that you've opened the email or visited the page, revealing your IP address and other information.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Divider()
+
+                HStack {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.red)
+                    Text("What's Blocked")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "1x1 pixel images from tracking domains"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Email tracking pixels"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Web beacon requests"
+                    )
+                }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Detection")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.secondary)
+
+                    Text("Blocks images matching common tracking pixel patterns (1x1 dimensions, known tracking domains, specific query parameters).")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(12)
+            .frame(width: 300)
+        }
+    }
+}
+
+struct PopupBlockingRow: View {
+    @ObservedObject var settings: PrivacySettings
+    @State private var showingInfo = false
+
+    var body: some View {
+        Toggle(isOn: $settings.popupBlocking) {
+            HStack(spacing: 12) {
+                Image(systemName: "rectangle.badge.xmark")
+                    .font(.system(size: 16))
+                    .foregroundColor(settings.popupBlocking ? .accentColor : .secondary)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text("Popup Blocking")
+                            .font(.system(size: 13, weight: .medium))
+                        Button(action: { showingInfo = true }) {
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 11))
+                                .foregroundColor(.accentColor)
+                        }
+                        .buttonStyle(.plain)
+                        .help("More info")
+                    }
+                    Text("Open popup windows in the current tab instead of new windows.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .toggleStyle(.switch)
+        .padding(.vertical, 4)
+        .popover(isPresented: $showingInfo, arrowEdge: .trailing) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "rectangle.badge.xmark.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("How It Works")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                Text("Instead of blocking popups entirely (which can break legitimate functionality), this feature redirects popup window requests to open in the current tab. This prevents annoying popups while maintaining website functionality.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Divider()
+
+                HStack {
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("What's Redirected")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "window.open() calls"
+                    )
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "target=\"_blank\" links"
+                    )
+                    InfoRow(
+                        icon: "chevron.right",
+                        text: "Popup window requests"
+                    )
+                }
+
+                Divider()
+
+                Text("Note: User-initiated popups (clicking a link) are still allowed, but automatic popups are redirected to the current tab.")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(12)
+            .frame(width: 300)
+        }
+    }
+}
+
+struct ThirdPartyCookieRow: View {
+    @ObservedObject var settings: PrivacySettings
+    @State private var showingInfo = false
+
+    var body: some View {
+        Toggle(isOn: $settings.thirdPartyCookieBlocking) {
+            HStack(spacing: 12) {
+                Image(systemName: "circle.slash")
+                    .font(.system(size: 16))
+                    .foregroundColor(settings.thirdPartyCookieBlocking ? .accentColor : .secondary)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text("Third-Party Cookie Blocking")
+                            .font(.system(size: 13, weight: .medium))
+                        Button(action: { showingInfo = true }) {
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 11))
+                                .foregroundColor(.accentColor)
+                        }
+                        .buttonStyle(.plain)
+                        .help("More info")
+                    }
+                    Text("Block cookies from domains other than the site you're visiting.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .toggleStyle(.switch)
+        .padding(.vertical, 4)
+        .popover(isPresented: $showingInfo, arrowEdge: .trailing) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "circle.slash.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("How It Works")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                Text("Third-party cookies are set by domains other than the one you're visiting. They're commonly used for tracking across websites. This feature blocks all third-party cookies while allowing first-party cookies for the site you're on.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Divider()
+
+                HStack {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.red)
+                    Text("What's Blocked")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Cookies from third-party domains"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Cross-site tracking cookies"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Advertising network cookies"
+                    )
+                }
+
+                Divider()
+
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.green)
+                    Text("What's Allowed")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "checkmark",
+                        text: "First-party cookies (same domain)"
+                    )
+                    InfoRow(
+                        icon: "checkmark",
+                        text: "Cookies with SameSite=Strict"
+                    )
+                }
+
+                Divider()
+
+                Text("Note: Some websites may not function correctly without third-party cookies, especially embedded content like videos or social widgets.")
+                    .font(.system(size: 10))
+                    .foregroundColor(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(12)
+            .frame(width: 320)
+        }
+    }
+}
+
+struct NonPersistentStorageRow: View {
+    @ObservedObject var settings: PrivacySettings
+    @State private var showingInfo = false
+
+    var body: some View {
+        Toggle(isOn: $settings.nonPersistentStorage) {
+            HStack(spacing: 12) {
+                Image(systemName: "clock.badge.xmark")
+                    .font(.system(size: 16))
+                    .foregroundColor(settings.nonPersistentStorage ? .accentColor : .secondary)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text("Non-Persistent Storage")
+                            .font(.system(size: 13, weight: .medium))
+                        Button(action: { showingInfo = true }) {
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 11))
+                                .foregroundColor(.accentColor)
+                        }
+                        .buttonStyle(.plain)
+                        .help("More info")
+                    }
+                    Text("Clear non-whitelisted cookies and storage when Barc quits.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .toggleStyle(.switch)
+        .padding(.vertical, 4)
+        .popover(isPresented: $showingInfo, arrowEdge: .trailing) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "clock.badge.xmark.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                    Text("How It Works")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                Text("When enabled, all cookies, localStorage, and IndexedDB data from non-whitelisted domains are cleared when you quit Barc. This provides a fresh start each session while allowing you to keep data for trusted sites via the Storage Whitelist.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Divider()
+
+                HStack {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.red)
+                    Text("What's Cleared")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Cookies from non-whitelisted domains"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "localStorage data"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "IndexedDB databases"
+                    )
+                    InfoRow(
+                        icon: "xmark.circle",
+                        text: "Session storage"
+                    )
+                }
+
+                Divider()
+
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.green)
+                    Text("What's Preserved")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(
+                        icon: "checkmark",
+                        text: "Storage from whitelisted domains"
+                    )
+                    InfoRow(
+                        icon: "checkmark",
+                        text: "Browser cache and history"
+                    )
+                }
+
+                Divider()
+
+                Text("Note: You'll need to log in to non-whitelisted sites each time you launch Barc. Add frequently used sites to the Storage Whitelist to avoid this.")
+                    .font(.system(size: 10))
+                    .foregroundColor(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(12)
+            .frame(width: 320)
         }
     }
 }
