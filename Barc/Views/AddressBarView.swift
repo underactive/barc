@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct AddressBarView: View {
     @EnvironmentObject var browserState: BrowserState
@@ -35,103 +36,234 @@ struct AddressBarView: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Navigation buttons
-            HStack(spacing: 4) {
-                NavigationButton(
-                    systemName: "chevron.left",
-                    action: browserState.goBack,
-                    isEnabled: browserState.selectedTab?.canGoBack ?? false
-                )
+        // This view is now split into separate components
+        EmptyView()
+    }
+}
 
-                NavigationButton(
-                    systemName: "chevron.right",
-                    action: browserState.goForward,
-                    isEnabled: browserState.selectedTab?.canGoForward ?? false
-                )
+// MARK: - Group 1: Navigation Buttons (Left-aligned)
+struct NavigationButtonsView: View {
+    @EnvironmentObject var browserState: BrowserState
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            NavigationButton(
+                systemName: "chevron.left",
+                action: browserState.goBack,
+                isEnabled: browserState.selectedTab?.canGoBack ?? false
+            )
 
-                NavigationButton(
-                    systemName: browserState.selectedTab?.isLoading == true ? "xmark" : "arrow.clockwise",
-                    action: {
-                        if browserState.selectedTab?.isLoading == true {
-                            browserState.selectedTab?.webView?.stopLoading()
-                        } else {
-                            browserState.reloadCurrentTab()
-                        }
-                    },
-                    isEnabled: true
-                )
+            NavigationButton(
+                systemName: "chevron.right",
+                action: browserState.goForward,
+                isEnabled: browserState.selectedTab?.canGoForward ?? false
+            )
+
+            NavigationButton(
+                systemName: browserState.selectedTab?.isLoading == true ? "xmark" : "arrow.clockwise",
+                action: {
+                    if browserState.selectedTab?.isLoading == true {
+                        browserState.selectedTab?.webView?.stopLoading()
+                    } else {
+                        browserState.reloadCurrentTab()
+                    }
+                },
+                isEnabled: true
+            )
+        }
+        .padding(.leading, 12)
+        .padding(.trailing, 12)
+        .padding(.vertical, 4)
+        .frame(height: 28)
+    }
+}
+
+// MARK: - Group 2: URL Bar (Expands to fill space)
+struct URLBarView: View {
+    @EnvironmentObject var browserState: BrowserState
+    @State private var inputText: String = ""
+    @State private var isEditing: Bool = false
+    @FocusState private var isFocused: Bool
+    @State private var currentTabId: UUID?
+    @State private var currentURL: URL?
+    @State private var cancellables = Set<AnyCancellable>()
+
+    var body: some View {
+        HStack(spacing: 8) {
+            // Security indicator
+            if let url = currentURL {
+                Image(systemName: url.scheme == "https" ? "lock.fill" : "lock.open")
+                    .font(.system(size: 10))
+                    .foregroundColor(url.scheme == "https" ? .green : .orange)
             }
 
-            // URL/Search field
-            HStack(spacing: 8) {
-                // Security indicator
-                if let url = browserState.selectedTab?.url {
-                    Image(systemName: url.scheme == "https" ? "lock.fill" : "lock.open")
-                        .font(.system(size: 10))
-                        .foregroundColor(url.scheme == "https" ? .green : .orange)
+            TextField("Search with Kagi or enter URL", text: $inputText)
+                .textFieldStyle(.plain)
+                .font(.system(size: 13))
+                .lineLimit(1)
+                .frame(minWidth: 0, maxWidth: .infinity)
+                .focused($isFocused)
+                .onSubmit {
+                    browserState.navigate(to: inputText)
+                    isFocused = false
                 }
-
-                TextField("Search with Kagi or enter URL", text: $inputText)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 13))
-                    .focused($isFocused)
-                    .onSubmit {
-                        browserState.navigate(to: inputText)
-                        isFocused = false
+                .onChange(of: browserState.selectedTabId) { _, newTabId in
+                    // Update when tab changes
+                    currentTabId = newTabId
+                    if let tab = browserState.selectedTab, !isEditing {
+                        currentURL = tab.url
+                        inputText = tab.url?.absoluteString ?? ""
                     }
-                    .onChange(of: browserState.selectedTab?.url) { _, newURL in
-                        if !isEditing {
-                            inputText = newURL?.absoluteString ?? ""
-                        }
+                }
+                .onChange(of: browserState.selectedTab?.url) { _, newURL in
+                    // Update when URL changes on the current tab
+                    if browserState.selectedTabId == currentTabId, !isEditing {
+                        currentURL = newURL
+                        inputText = newURL?.absoluteString ?? ""
                     }
-                    .onChange(of: isFocused) { _, focused in
-                        isEditing = focused
-                        if focused {
-                            // Select all text when focused
-                            DispatchQueue.main.async {
-                                if let textField = NSApp.keyWindow?.firstResponder as? NSTextView {
-                                    textField.selectAll(nil)
-                                }
+                }
+                .onChange(of: isFocused) { _, focused in
+                    isEditing = focused
+                    if focused {
+                        // Select all text when focused
+                        DispatchQueue.main.async {
+                            if let textField = NSApp.keyWindow?.firstResponder as? NSTextView {
+                                textField.selectAll(nil)
                             }
                         }
                     }
-
-                // Clear button
-                if !inputText.isEmpty && isEditing {
-                    Button(action: { inputText = "" }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 12))
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(.plain)
                 }
+
+            // Clear button
+            if !inputText.isEmpty && isEditing {
+                Button(action: { inputText = "" }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(NSColor.controlBackgroundColor))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .strokeBorder(
-                                isFocused ? Color.accentColor.opacity(0.5) : Color.clear,
-                                lineWidth: 2
-                            )
-                    )
-            )
-            .overlay(alignment: .bottom) {
-                // Loading progress bar at the bottom of URL field
-                if let tab = browserState.selectedTab {
-                    LoadingProgressBar(
-                        progress: tab.estimatedProgress,
-                        isLoading: tab.isLoading
-                    )
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .frame(minWidth: 0, maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(NSColor.controlBackgroundColor))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(
+                            isFocused ? Color.accentColor.opacity(0.5) : Color.clear,
+                            lineWidth: 2
+                        )
+                )
+        )
+        .overlay(alignment: .bottom) {
+            // Loading progress bar at the bottom of URL field
+            if let tab = browserState.selectedTab {
+                LoadingProgressBarView(tab: tab)
                     .padding(.horizontal, 1)
                     .offset(y: 1)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            isFocused = true
+        }
+        .padding(.vertical, 4)
+        .frame(height: 28)
+        .frame(minWidth: 100, maxWidth: .infinity)
+        .onAppear {
+            currentTabId = browserState.selectedTabId
+            currentURL = browserState.selectedTab?.url
+            inputText = browserState.selectedTab?.url?.absoluteString ?? ""
+            setupTabObserver()
+        }
+        .onChange(of: browserState.selectedTabId) { _, _ in
+            setupTabObserver()
+        }
+        .onDisappear {
+            cancellables.removeAll()
+        }
+        .onChange(of: browserState.focusAddressBarTrigger) { _, _ in
+            DispatchQueue.main.async {
+                isFocused = true
+            }
+        }
+        .onChange(of: browserState.selectedTabId) { _, _ in
+            // Clear focus when switching tabs to allow interactions with other tabs
+            isFocused = false
+        }
+    }
+    
+    private func setupTabObserver() {
+        cancellables.removeAll()
+        
+        guard let tab = browserState.selectedTab else {
+            currentTabId = nil
+            currentURL = nil
+            if !isEditing {
+                inputText = ""
+            }
+            return
+        }
+        
+        currentTabId = tab.id
+        currentURL = tab.url
+        if !isEditing {
+            inputText = tab.url?.absoluteString ?? ""
+        }
+        
+        // Observe URL changes by watching the tab's published url property
+        tab.$url
+            .receive(on: DispatchQueue.main)
+            .sink { [weak tab] newURL in
+                guard let tab = tab,
+                      tab.id == browserState.selectedTabId,
+                      !isEditing else { return }
+                
+                if newURL != currentURL {
+                    currentURL = newURL
+                    inputText = newURL?.absoluteString ?? ""
                 }
             }
+            .store(in: &cancellables)
+    }
+}
 
+// MARK: - Group 3: Action Buttons (Right-aligned)
+struct ActionButtonsView: View {
+    @EnvironmentObject var browserState: BrowserState
+    @EnvironmentObject private var privacySettings: PrivacySettings
+    @StateObject private var networkMonitor = NetworkActivityMonitor.shared
+    @StateObject private var blockedMonitor = BlockedRequestsMonitor.shared
+    @ObservedObject private var soundManager = NetworkSoundManager.shared
+    @Environment(\.openSettings) private var openSettings
+    @State private var showingPrivacyPopover: Bool = false
+    @State private var showingDownloadPopover: Bool = false
+
+    // Privacy score helpers
+    private var maxPrivacyScore: Int { PrivacySettings.maxPrivacyScore }
+    private var privacyScore: Int { privacySettings.privacyScore }
+    private var privacyScoreColor: Color { privacySettings.privacyScoreColor }
+    private var privacyScoreIcon: String { privacySettings.privacyScoreIcon }
+
+    private var privacyScoreDescription: String {
+        "Privacy Score: \(privacyScore)/\(maxPrivacyScore) - \(privacySettings.privacyScoreDescription)"
+    }
+
+    private var blockedCount: Int {
+        guard let tabId = browserState.selectedTabId else { return 0 }
+        return blockedMonitor.blockedCount(for: tabId)
+    }
+
+    private var blockedRequests: [BlockedRequestsMonitor.BlockedRequest] {
+        guard let tabId = browserState.selectedTabId else { return [] }
+        return blockedMonitor.blockedRequests(for: tabId)
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
             // Video download button
             Button(action: { showingDownloadPopover.toggle() }) {
                 Image(systemName: "arrow.down.circle")
@@ -217,20 +349,10 @@ struct AddressBarView: View {
                 )
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .onAppear {
-            inputText = browserState.selectedTab?.url?.absoluteString ?? ""
-        }
-        .onChange(of: browserState.focusAddressBarTrigger) { _, _ in
-            DispatchQueue.main.async {
-                isFocused = true
-            }
-        }
-        .onChange(of: browserState.selectedTabId) { _, _ in
-            // Clear focus when switching tabs to allow interactions with other tabs
-            isFocused = false
-        }
+        .padding(.leading, 12)
+        .padding(.trailing, 16)
+        .padding(.vertical, 4)
+        .frame(height: 28)
     }
 }
 
@@ -256,7 +378,66 @@ struct NavigationButton: View {
     }
 }
 
-// Progress bar for page loading
+// Progress bar for page loading - observes tab directly
+struct LoadingProgressBarView: View {
+    @ObservedObject var tab: Tab
+    
+    @State private var displayedProgress: Double = 0
+    @State private var isVisible: Bool = false
+
+    var body: some View {
+        GeometryReader { geometry in
+            if isVisible {
+                Rectangle()
+                    .fill(Color.accentColor)
+                    .frame(width: geometry.size.width * displayedProgress)
+            }
+        }
+        .frame(height: 2)
+        .clipShape(RoundedRectangle(cornerRadius: 1))
+        .onChange(of: tab.isLoading) { _, newIsLoading in
+            if newIsLoading {
+                // Starting to load - show the bar and reset progress
+                displayedProgress = 0.05 // Start with a small amount visible
+                withAnimation(.easeOut(duration: 0.1)) {
+                    isVisible = true
+                }
+            } else {
+                // Finished loading - animate to 100% then hide
+                withAnimation(.easeOut(duration: 0.2)) {
+                    displayedProgress = 1.0
+                }
+                // Hide after animation completes
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        isVisible = false
+                    }
+                    // Reset for next load
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        displayedProgress = 0
+                    }
+                }
+            }
+        }
+        .onChange(of: tab.estimatedProgress) { _, newProgress in
+            // Only update if we're loading and new progress is higher
+            if tab.isLoading && newProgress > displayedProgress {
+                withAnimation(.easeOut(duration: 0.15)) {
+                    displayedProgress = newProgress
+                }
+            }
+        }
+        .onAppear {
+            // Initialize state based on current loading status
+            if tab.isLoading {
+                isVisible = true
+                displayedProgress = max(tab.estimatedProgress, 0.05)
+            }
+        }
+    }
+}
+
+// Legacy progress bar (kept for backward compatibility if needed)
 struct LoadingProgressBar: View {
     let progress: Double
     let isLoading: Bool
@@ -975,3 +1156,4 @@ struct VideoDownloadMenu: View {
         .environmentObject(BrowserState())
         .frame(width: 600)
 }
+

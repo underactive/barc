@@ -13,27 +13,42 @@ struct ContentView: View {
             SidebarView()
                 .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 280)
         } detail: {
-            VStack(spacing: 0) {
-                // Address bar (includes loading progress bar)
-                AddressBarView()
-
-                // Web content
-                ZStack {
-                    if browserState.tabs.isEmpty {
-                        EmptyStateView()
-                    } else {
-                        // Keep all WebViews in memory, show only the selected one
-                        ForEach(browserState.tabs) { tab in
-                            WebView(tab: tab)
-                                .opacity(browserState.selectedTabId == tab.id ? 1 : 0)
-                                .allowsHitTesting(browserState.selectedTabId == tab.id)
-                        }
+            // Web content
+            ZStack {
+                if browserState.tabs.isEmpty {
+                    EmptyStateView()
+                } else {
+                    // Keep all WebViews in memory, show only the selected one
+                    ForEach(browserState.tabs) { tab in
+                        WebView(tab: tab)
+                            .opacity(browserState.selectedTabId == tab.id ? 1 : 0)
+                            .allowsHitTesting(browserState.selectedTabId == tab.id)
                     }
                 }
             }
             .frame(minWidth: 400, minHeight: 300)
         }
         .navigationSplitViewStyle(.balanced)
+        .toolbar {
+            // Group 1: Navigation buttons (left-aligned) - fixed size, never disappear
+            ToolbarItem(placement: .navigation) {
+                NavigationButtonsView()
+                    .fixedSize(horizontal: true, vertical: false)
+            }
+            
+            // Group 2: URL bar (expands to fill space, but can shrink)
+            ToolbarItem(placement: .principal) {
+                URLBarView()
+                    .frame(minWidth: 100)
+                    .layoutPriority(-1)
+            }
+            
+            // Group 3: Action buttons (right-aligned) - fixed size, never disappear
+            ToolbarItem(placement: .automatic) {
+                ActionButtonsView()
+                    .fixedSize(horizontal: true, vertical: false)
+            }
+        }
         .onAppear {
             setupKeyboardShortcuts()
         }

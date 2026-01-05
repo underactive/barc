@@ -11,8 +11,9 @@ struct BarcApp: App {
             ContentView()
                 .environmentObject(browserState)
                 .environmentObject(privacySettings)
+                .background(WindowAccessor())
         }
-        .windowStyle(.hiddenTitleBar)
+        .windowToolbarStyle(.unified)
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("New Tab") {
@@ -47,6 +48,34 @@ struct BarcApp: App {
         Settings {
             SettingsView()
                 .environmentObject(privacySettings)
+        }
+    }
+}
+
+// MARK: - Window Accessor
+
+struct WindowAccessor: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async {
+            if let window = view.window {
+                window.titlebarAppearsTransparent = true
+                window.titleVisibility = .hidden
+                window.title = ""
+                window.toolbarStyle = .unified
+            }
+        }
+        return view
+    }
+    
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async {
+            if let window = nsView.window {
+                window.titlebarAppearsTransparent = true
+                window.titleVisibility = .hidden
+                window.title = ""
+                window.toolbarStyle = .unified
+            }
         }
     }
 }
