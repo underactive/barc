@@ -339,6 +339,49 @@ final class SourceWindowManager: NSObject, NSWindowDelegate {
     }
 }
 
+// MARK: - WebView Container for Fullscreen Support
+
+/// Container view that holds WKWebView to work around SwiftUI's constraint management.
+///
+/// SwiftUI's NSViewRepresentable sets `translatesAutoresizingMaskIntoConstraints = false`
+/// on hosted views. When WKWebView goes fullscreen, WebKit removes the view from its
+/// hierarchy and places it in a fullscreen window, removing all constraints. This leaves
+/// the webview with no sizing information, causing incorrect fullscreen dimensions.
+///
+/// By wrapping the WKWebView in this container and managing autoresizing manually,
+/// the webview maintains proper sizing during fullscreen transitions.
+final class WebViewContainer: NSView {
+    var webView: BarcWebView?
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        // Prevent SwiftUI from managing our constraints
+        translatesAutoresizingMaskIntoConstraints = true
+        autoresizingMask = [.width, .height]
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func configure(with webView: BarcWebView) {
+        self.webView = webView
+
+        // Configure webview for proper fullscreen support
+        webView.translatesAutoresizingMaskIntoConstraints = true
+        webView.autoresizingMask = [.width, .height]
+        webView.frame = bounds
+
+        addSubview(webView)
+    }
+
+    override func layout() {
+        super.layout()
+        // Ensure webview fills container on layout changes
+        webView?.frame = bounds
+    }
+}
+
 struct WebView: NSViewRepresentable {
     @ObservedObject var tab: Tab
     @EnvironmentObject var browserState: BrowserState
@@ -349,7 +392,9 @@ struct WebView: NSViewRepresentable {
     static let videoDownloadMessageHandler = "barcVideoDownload"
     static let audioPlaybackMessageHandler = "barcAudioPlayback"
 
-    func makeNSView(context: Context) -> BarcWebView {
+    func makeNSView(context: Context) -> WebViewContainer {
+        let container = WebViewContainer(frame: .zero)
+
         let configuration = createPrivacyConfiguration(coordinator: context.coordinator)
         let webView = BarcWebView(frame: .zero, configuration: configuration)
 
@@ -359,6 +404,7 @@ struct WebView: NSViewRepresentable {
         webView.allowsBackForwardNavigationGestures = true
         webView.allowsMagnification = true
 
+        container.configure(with: webView)
         context.coordinator.setupObservers(for: webView)
         tab.webView = webView
 
@@ -366,10 +412,10 @@ struct WebView: NSViewRepresentable {
             webView.load(URLRequest(url: url))
         }
 
-        return webView
+        return container
     }
 
-    func updateNSView(_ webView: BarcWebView, context: Context) {
+    func updateNSView(_ container: WebViewContainer, context: Context) {
         // Only load if URL changed externally
     }
 
@@ -431,6 +477,9 @@ struct WebView: NSViewRepresentable {
 
         // Privacy: Fraudulent website warning
         configuration.preferences.isFraudulentWebsiteWarningEnabled = settings.fraudulentWebsiteWarning
+
+        // Enable HTML5 fullscreen for video elements (YouTube, Vimeo, etc.)
+        configuration.preferences.isElementFullscreenEnabled = true
 
         // Privacy: Third-party cookie blocking using content rules
         if settings.thirdPartyCookieBlocking {
