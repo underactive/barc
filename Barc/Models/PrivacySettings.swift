@@ -392,6 +392,24 @@ final class PrivacySettings: ObservableObject {
         didSet { objectWillChange.send() }
     }
 
+    @AppStorage("privacy.hasShownYouTubeWhitelistPrompt") var hasShownYouTubeWhitelistPrompt: Bool = false {
+        didSet { objectWillChange.send() }
+    }
+
+    /// Check if youtube.com is in the storage whitelist
+    var isYouTubeWhitelisted: Bool {
+        whitelistedDomains.contains { domain in
+            domain == "youtube.com" || domain == "www.youtube.com"
+        }
+    }
+
+    /// Add youtube.com to the storage whitelist
+    func whitelistYouTube() {
+        if !isYouTubeWhitelisted {
+            addWhitelistedDomain("youtube.com")
+        }
+    }
+
     // MARK: - General Settings
 
     @AppStorage("general.searchEngine") var searchEngine: SearchEngine = .kagi {

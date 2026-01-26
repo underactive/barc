@@ -53,10 +53,12 @@ struct DownloadRowView: View {
 
             // Error message
             if download.status == .failed, let error = download.errorMessage {
-                Text(error)
-                    .font(.system(size: 9))
+                Text("ERROR: \(error)")
+                    .font(.system(size: 9, design: .monospaced))
                     .foregroundColor(.red)
-                    .lineLimit(2)
+                    .lineLimit(nil)  // Show full error
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
             }
         }
         .padding(.vertical, 6)

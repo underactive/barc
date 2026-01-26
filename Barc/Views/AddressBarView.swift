@@ -241,6 +241,8 @@ struct ActionButtonsView: View {
     @Environment(\.openSettings) private var openSettings
     @State private var showingPrivacyPopover: Bool = false
     @State private var showingDownloadPopover: Bool = false
+    @State private var showingYouTubeWhitelistAlert: Bool = false
+    @State private var pendingDownloadFormat: VideoFormat?
 
     // Privacy score helpers
     private var maxPrivacyScore: Int { PrivacySettings.maxPrivacyScore }
@@ -278,11 +280,26 @@ struct ActionButtonsView: View {
                     videoTitle: browserState.selectedTab?.title ?? "Video",
                     onDownload: { format in
                         showingDownloadPopover = false
-                        guard let tab = browserState.selectedTab,
-                              let url = tab.url else { return }
-                        DownloadManager.shared.startDownload(url: url, pageTitle: tab.title, format: format)
+                        handleDownloadRequest(format: format)
                     }
                 )
+            }
+            .alert("YouTube Login Persistence", isPresented: $showingYouTubeWhitelistAlert) {
+                Button("Add to Whitelist") {
+                    privacySettings.whitelistYouTube()
+                    privacySettings.hasShownYouTubeWhitelistPrompt = true
+                    startDownload(format: pendingDownloadFormat ?? .best)
+                }
+                Button("Not Now") {
+                    privacySettings.hasShownYouTubeWhitelistPrompt = false
+                    startDownload(format: pendingDownloadFormat ?? .best)
+                }
+                Button("Don't Ask Again", role: .cancel) {
+                    privacySettings.hasShownYouTubeWhitelistPrompt = true
+                    startDownload(format: pendingDownloadFormat ?? .best)
+                }
+            } message: {
+                Text("For YouTube downloads to work reliably, you may need to be logged in.\n\nAdd youtube.com to your storage whitelist to keep your login between sessions.")
             }
 
             // Element picker (xkill) button
@@ -353,6 +370,33 @@ struct ActionButtonsView: View {
         .padding(.trailing, 16)
         .padding(.vertical, 4)
         .frame(height: 28)
+    }
+
+    // MARK: - Download Helpers
+
+    /// Handles a download request, potentially showing the whitelist prompt first
+    private func handleDownloadRequest(format: VideoFormat) {
+        // Check if this is a YouTube URL and whitelist prompt should be shown
+        let isYouTubeURL = browserState.selectedTab?.url?.host?.contains("youtube") == true
+
+        if isYouTubeURL &&
+           !privacySettings.isYouTubeWhitelisted &&
+           !privacySettings.hasShownYouTubeWhitelistPrompt {
+            // Show whitelist prompt
+            pendingDownloadFormat = format
+            showingYouTubeWhitelistAlert = true
+        } else {
+            // Start download directly
+            startDownload(format: format)
+        }
+    }
+
+    /// Starts the actual download
+    private func startDownload(format: VideoFormat) {
+        guard let tab = browserState.selectedTab,
+              let url = tab.url else { return }
+        DownloadManager.shared.startDownload(url: url, pageTitle: tab.title, format: format)
+        pendingDownloadFormat = nil
     }
 }
 

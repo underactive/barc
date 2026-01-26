@@ -9,6 +9,29 @@ import Foundation
 import SwiftUI
 import Combine
 import UserNotifications
+import WebKit
+import os.log
+
+private let downloadLog = OSLog(subsystem: "com.barc.browser", category: "Download")
+
+private func logDebug(_ message: String) {
+    os_log("%{public}@", log: downloadLog, type: .debug, message)
+    // Also write to file for easier debugging
+    let logFile = "/tmp/barc_download.log"
+    let timestamp = ISO8601DateFormatter().string(from: Date())
+    let logMessage = "[\(timestamp)] \(message)\n"
+    if let data = logMessage.data(using: .utf8) {
+        if FileManager.default.fileExists(atPath: logFile) {
+            if let handle = FileHandle(forWritingAtPath: logFile) {
+                handle.seekToEndOfFile()
+                handle.write(data)
+                handle.closeFile()
+            }
+        } else {
+            FileManager.default.createFile(atPath: logFile, contents: data)
+        }
+    }
+}
 
 /// Manages video downloads using the bundled yt-dlp binary.
 /// 
@@ -70,13 +93,17 @@ enum VideoFormat: String, CaseIterable, Identifiable {
     var ytdlpArguments: [String] {
         switch self {
         case .best:
-            return []  // Default behavior
+            // Let yt-dlp choose the best format automatically
+            return []
         case .mp4:
-            return ["-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best", "--merge-output-format", "mp4"]
+            // Download best and convert/remux to MP4
+            return ["--remux-video", "mp4"]
         case .quality720p:
-            return ["-f", "bestvideo[height<=720]+bestaudio/best[height<=720]/best"]
+            // Limit to 720p max, simple format string
+            return ["-S", "res:720"]
         case .quality480p:
-            return ["-f", "bestvideo[height<=480]+bestaudio/best[height<=480]/best"]
+            // Limit to 480p max, simple format string
+            return ["-S", "res:480"]
         case .audioOnly:
             return ["-x", "--audio-format", "mp3", "--audio-quality", "0"]
         }
@@ -94,6 +121,7 @@ final class DownloadManager: ObservableObject {
 
     private var processes: [UUID: Process] = [:]
     private var pendingQueue: [Download] = []
+    private var cookiesFiles: [UUID: URL] = [:]  // Track temp cookie files per download
 
     // Get yt-dlp path from bundle
     private var ytdlpPath: URL? {
@@ -101,6 +129,102 @@ final class DownloadManager: ObservableObject {
     }
 
     private init() {}
+
+    // MARK: - Cookie Extraction for YouTube Authentication
+
+    /// Extracts cookies from WKWebView and writes them to a temporary file in Netscape format.
+    /// This allows yt-dlp to use the browser's authentication session for downloads.
+    private func getCookiesForDownload(downloadId: UUID) async -> URL? {
+        logDebug("[Barc Download] Starting cookie extraction for download \(downloadId)")
+
+        return await withCheckedContinuation { continuation in
+            logDebug("[Barc Download] Requesting cookies from WKWebsiteDataStore...")
+            WKWebsiteDataStore.default().httpCookieStore.getAllCookies { [weak self] cookies in
+                logDebug("[Barc Download] Got \(cookies.count) total cookies from browser")
+
+                // Filter for relevant domains (YouTube and Google auth)
+                let relevantCookies = cookies.filter { cookie in
+                    let domain = cookie.domain.lowercased()
+                    return domain.contains("youtube") ||
+                           domain.contains("googlevideo") ||
+                           domain.contains("google.com") ||
+                           domain.contains(".google.")
+                }
+
+                logDebug("[Barc Download] Found \(relevantCookies.count) relevant cookies for YouTube/Google")
+
+                guard !relevantCookies.isEmpty else {
+                    logDebug("[Barc Download] No relevant cookies found for YouTube - continuing without auth")
+                    continuation.resume(returning: nil)
+                    return
+                }
+
+                let content = self?.generateNetscapeCookieContent(from: relevantCookies) ?? ""
+
+                // Use /tmp directly for easier debugging
+                let cookiesFile = URL(fileURLWithPath: "/tmp/barc_cookies_\(downloadId.uuidString).txt")
+
+                do {
+                    try content.write(to: cookiesFile, atomically: true, encoding: .utf8)
+                    logDebug("[Barc Download] Wrote \(relevantCookies.count) cookies to: \(cookiesFile.path)")
+                    continuation.resume(returning: cookiesFile)
+                } catch {
+                    logDebug("[Barc Download] Failed to write cookies file: \(error)")
+                    continuation.resume(returning: nil)
+                }
+            }
+        }
+    }
+
+    /// Converts HTTPCookie array to Netscape cookies.txt format for yt-dlp.
+    private func generateNetscapeCookieContent(from cookies: [HTTPCookie]) -> String {
+        var content = "# Netscape HTTP Cookie File\n"
+        content += "# http://curl.haxx.se/rfc/cookie_spec.html\n"
+        content += "# Generated by Barc for yt-dlp downloads\n\n"
+
+        // Use a future date for session cookies (1 year from now)
+        let sessionCookieExpiry = Int(Date().addingTimeInterval(365 * 24 * 60 * 60).timeIntervalSince1970)
+
+        for cookie in cookies {
+            // Skip cookies with empty names or values
+            guard !cookie.name.isEmpty else { continue }
+
+            // Domain should have leading dot for domain cookies
+            let domain = cookie.domain.hasPrefix(".") ? cookie.domain : ".\(cookie.domain)"
+            // Flag is TRUE if it's a domain cookie (applies to subdomains)
+            let flag = "TRUE"  // Always TRUE since we're adding the dot prefix
+            let path = cookie.path.isEmpty ? "/" : cookie.path
+            let secure = cookie.isSecure ? "TRUE" : "FALSE"
+
+            // For session cookies (no expiry), use a future date instead of 0
+            // Python's http.cookiejar treats 0 as "already expired"
+            let expiration: Int
+            if let expiresDate = cookie.expiresDate {
+                expiration = Int(expiresDate.timeIntervalSince1970)
+            } else {
+                expiration = sessionCookieExpiry
+            }
+
+            // Escape any tabs or newlines in the value
+            let safeValue = cookie.value
+                .replacingOccurrences(of: "\t", with: "")
+                .replacingOccurrences(of: "\n", with: "")
+                .replacingOccurrences(of: "\r", with: "")
+
+            content += "\(domain)\t\(flag)\t\(path)\t\(secure)\t\(expiration)\t\(cookie.name)\t\(safeValue)\n"
+        }
+
+        return content
+    }
+
+    /// Cleans up the temporary cookies file for a download.
+    private func cleanupCookiesFile(for downloadId: UUID) {
+        if let cookiesFile = cookiesFiles.removeValue(forKey: downloadId) {
+            // DEBUG: Don't delete the cookies file so we can inspect it
+            // try? FileManager.default.removeItem(at: cookiesFile)
+            logDebug("[Barc Download] Keeping cookies file for debugging: \(cookiesFile.path)")
+        }
+    }
 
     // MARK: - Public Methods
 
@@ -131,6 +255,9 @@ final class DownloadManager: ObservableObject {
 
         // Remove from pending queue if present
         pendingQueue.removeAll { $0.id == download.id }
+
+        // Clean up cookies file
+        cleanupCookiesFile(for: download.id)
 
         startNextPending()
     }
@@ -180,6 +307,19 @@ final class DownloadManager: ObservableObject {
             return
         }
 
+        // Get cookies asynchronously, then start the download
+        Task { @MainActor in
+            let cookiesFile = await getCookiesForDownload(downloadId: download.id)
+            if let cookiesFile = cookiesFile {
+                cookiesFiles[download.id] = cookiesFile
+            }
+            startYtdlpProcess(for: download, ytdlp: ytdlp, cookiesFile: cookiesFile)
+        }
+    }
+
+    private func startYtdlpProcess(for download: Download, ytdlp: URL, cookiesFile: URL?) {
+        let fileManager = FileManager.default
+
         let process = Process()
         process.executableURL = ytdlp
 
@@ -197,7 +337,8 @@ final class DownloadManager: ObservableObject {
         } catch {
             download.status = .failed
             download.errorMessage = "Failed to create download directory: \(error.localizedDescription)"
-            print("[Barc Download] Failed to create directory: \(error.localizedDescription)")
+            logDebug("[Barc Download] Failed to create directory: \(error.localizedDescription)")
+            cleanupCookiesFile(for: download.id)
             return
         }
 
@@ -212,6 +353,16 @@ final class DownloadManager: ObservableObject {
             "--print", "after_video:FILEPATH:%(filepath)s"
         ]
 
+        // NOTE: Cookies are intentionally NOT passed to yt-dlp because:
+        // - Authenticated requests use YouTube APIs that require JavaScript runtime
+        // - Without cookies, yt-dlp uses simpler APIs (android/safari) that work without JS
+        // - Most videos download fine without authentication
+        // TODO: Consider adding option to enable cookies for age-restricted/private videos
+        // if let cookiesPath = cookiesFile?.path {
+        //     arguments.append(contentsOf: ["--cookies", cookiesPath])
+        //     logDebug("[Barc Download] Using cookies file for authentication")
+        // }
+
         // Add format-specific arguments
         arguments.append(contentsOf: download.format.ytdlpArguments)
 
@@ -219,6 +370,9 @@ final class DownloadManager: ObservableObject {
         arguments.append(download.url.absoluteString)
 
         process.arguments = arguments
+
+        // Debug: print the full command
+        logDebug("[Barc Download] Running: yt-dlp \(arguments.joined(separator: " "))")
 
         let outputPipe = Pipe()
         let errorPipe = Pipe()
@@ -247,6 +401,7 @@ final class DownloadManager: ObservableObject {
             }
         }
 
+        let downloadId = download.id
         process.terminationHandler = { [weak self, weak download] process in
             guard let download = download else { return }
 
@@ -257,9 +412,12 @@ final class DownloadManager: ObservableObject {
             Task { @MainActor in
                 if process.terminationStatus != 0 && !stderrMessage.isNilOrEmpty {
                     download.errorMessage = stderrMessage
-                    print("[Barc Download] Error: \(stderrMessage ?? "unknown")")
+                    logDebug("[Barc Download] Error: \(stderrMessage ?? "unknown")")
                 }
                 self?.handleProcessTermination(process, for: download)
+
+                // Clean up the temporary cookies file
+                self?.cleanupCookiesFile(for: downloadId)
             }
         }
 
