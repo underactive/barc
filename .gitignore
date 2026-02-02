@@ -69,3 +69,7 @@ fastlane/test_output
 .env
 .env.*
 secrets/
+
+# Build artifacts
+.build/
+dist/
