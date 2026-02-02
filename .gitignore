@@ -73,3 +73,10 @@ secrets/
 # Build artifacts
 .build/
 dist/
+
+# Claude Code session files
+CLAUDE_SESSION_HISTORY.md
+COMPLIANCE_REVIEW.md
+RECOMMENDATIONS_TODO.md
+TESTING_TODO.md
+.claude/
